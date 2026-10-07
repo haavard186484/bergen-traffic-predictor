@@ -219,6 +219,14 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Project data and generated artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+
 # Operating system files
 .DS_Store
 .AppleDouble
