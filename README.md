@@ -26,6 +26,8 @@ streamlit run app/streamlit_app.py
 3. Tren og evaluer mot en tidsserie-baseline.
 4. Lagre valgt modell i `models/` og bruk den i Streamlit-appen.
 
+Se [data-feasibility-guiden](docs/data-feasibility.md) for første dataoppgave.
+
 ## Status
 
 Dette er et prosjektskjelett. API-integrasjoner, valgt registreringspunkt og
