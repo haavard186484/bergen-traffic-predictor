@@ -14,3 +14,26 @@ def test_create_features_uses_past_traffic_and_next_hour_target() -> None:
     assert result.loc[10, TARGET_COLUMN] == 11
     assert pd.isna(result.loc[0, "traffic_1h_ago"])
     assert pd.isna(result.loc[169, TARGET_COLUMN])
+
+
+def test_create_features_does_not_shift_values_across_missing_timestamp() -> None:
+    timestamps = pd.date_range("2025-01-01", periods=30, freq="h", tz="UTC").delete(10)
+    data = pd.DataFrame({"timestamp": timestamps, "traffic_volume": range(len(timestamps))})
+
+    result = create_features(data)
+    row_at_11 = result.index[result["timestamp"] == pd.Timestamp("2025-01-01 11:00", tz="UTC")][0]
+    row_at_9 = result.index[result["timestamp"] == pd.Timestamp("2025-01-01 09:00", tz="UTC")][0]
+
+    assert pd.isna(result.loc[row_at_11, "traffic_1h_ago"])
+    assert pd.isna(result.loc[row_at_9, TARGET_COLUMN])
+
+
+def test_calendar_features_use_europe_oslo_not_utc() -> None:
+    data = pd.DataFrame(
+        {"timestamp": [pd.Timestamp("2025-01-01 23:00", tz="UTC")], "traffic_volume": [100]}
+    )
+
+    result = create_features(data)
+
+    assert result.loc[0, "hour"] == 0
+    assert result.loc[0, "day_of_week"] == 3
