@@ -51,7 +51,14 @@ Bruk Traffic Data API for flerårige timeverdier. Nedlasteren følger API-ets
 paginering automatisk; dere trenger derfor ikke å eksportere manuelt fra
 portalen.
 
-For Danmarks plass (`14630V805616`) og perioden 2022–2025:
+For Danmarks plass (`14630V805616`) og perioden 2022–2025 er dette den
+anbefalte kommandoen fra prosjektroten:
+
+```bash
+make refresh-traffic
+```
+
+Den tilsvarer følgende API-kall:
 
 ```bash
 python3 -m scripts.download_traffic_data \
@@ -62,10 +69,13 @@ python3 -m scripts.download_traffic_data \
 ```
 
 Kommandoen lagrer den rå CSV-filen og hentemetadata i `data/raw/`. Deretter
-bygges det normaliserte datasettet:
+bygges det normaliserte datasettet. For Danmarks plass skal `--allow-gaps`
+brukes, siden punktet har dokumenterte målegap:
 
 ```bash
-python3 -m scripts.prepare_traffic_dataset data/raw/traffic_2022_2025.csv
+python3 -m scripts.prepare_traffic_dataset \
+  data/raw/traffic_2022_2025.csv \
+  --allow-gaps
 ```
 
 Ved behov kan `prepare_traffic_dataset` fortsatt kombinere flere eksportfiler:
