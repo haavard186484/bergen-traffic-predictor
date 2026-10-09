@@ -44,3 +44,56 @@ Frost krever en `FROST_CLIENT_ID` og henter observasjoner med stasjon,
 referansetidsrom og elementer. Start med temperatur, nedbør og vindhastighet,
 men sjekk først at den valgte værstasjonen dekker samme periode som
 trafikkserien.
+
+## Bygg komplett trafikkdatasett
+
+Bruk Traffic Data API for flerårige timeverdier. Nedlasteren følger API-ets
+paginering automatisk; dere trenger derfor ikke å eksportere manuelt fra
+portalen.
+
+For Danmarks plass (`14630V805616`) og perioden 2022–2025:
+
+```bash
+python3 -m scripts.download_traffic_data \
+  --point-id 14630V805616 \
+  --from 2022-01-01T00:00:00+01:00 \
+  --to 2026-01-01T00:00:00+01:00 \
+  --output data/raw/traffic_2022_2025.csv
+```
+
+Kommandoen lagrer den rå CSV-filen og hentemetadata i `data/raw/`. Deretter
+bygges det normaliserte datasettet:
+
+```bash
+python3 -m scripts.prepare_traffic_dataset data/raw/traffic_2022_2025.csv
+```
+
+Ved behov kan `prepare_traffic_dataset` fortsatt kombinere flere eksportfiler:
+
+```text
+data/raw/traffic_2022.csv
+data/raw/traffic_2023.csv
+data/raw/traffic_2024.csv
+data/raw/traffic_2025.csv
+```
+
+Kommandoen stopper dersom eksporten inneholder ugyldige rader, dupliserte
+tidspunkter eller manglende timer, også i overgangen mellom filer. Ved suksess skriver den
+`data/processed/traffic_hourly.csv` og en sidecar-fil med kildefilens SHA-256,
+kvalitetsrapport og kolonnenavn. Begge filene er genererte artefakter og skal
+ikke committes.
+
+### Dokumentert håndtering av målegap
+
+For Danmarks plass inneholder API-dataene to målegap: 4.–7. juni 2022 og
+2.–18. oktober 2024. De skal ikke fylles eller slettes. Bygg i stedet en
+komplett timeakse med ukjent trafikkvolum som manglende verdi:
+
+```bash
+python3 -m scripts.prepare_traffic_dataset \
+  data/raw/traffic_2022_2025.csv \
+  --allow-gaps
+```
+
+Da kan senere feature-kode ekskludere rader der en nødvendig lag-feature eller
+target mangler, uten at den flytter observasjoner over et målegap.

@@ -250,4 +250,4 @@ $RECYCLE.BIN/
 *.code-workspace
 .vscode/*.code-workspace
 
-bergen-traffic-predictor-project.md
+local_files/
