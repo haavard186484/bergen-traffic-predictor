@@ -45,11 +45,26 @@ make refresh-traffic \
 
 ## Videre arbeidsflyt
 
-1. Utforsk og dokumenter datakvaliteten i det bearbeidede datasettet.
-2. Etabler en kronologisk tidsserie-baseline.
-3. Tren og evaluer modeller mot baselinen.
-4. Legg til værdata etter at trafikkmodellen er etablert.
-5. Koble valgt modell til Streamlit-appen.
+Lag EDA-rapporten og evaluer den reproduserbare baselinen med lokalt data:
+
+```bash
+python -m scripts.run_traffic_eda_baseline
+```
+
+Kommandoen leser `data/processed/traffic_hourly.csv` og oppdaterer
+`docs/traffic-eda-baseline.md`. Rapporten bruker lokal tid (`Europe/Oslo`) for
+kalendergrupper og deler kronologisk i trening (2022--2023), validering (2024)
+og test (2025). Målegap beholdes som manglende verdier i alle steg.
+
+Baselinen predikerer trafikken ved tidspunkt `t` med den observerte verdien ved
+`t - 168 timer` (samme time forrige uke). Oppslaget gjøres på eksakt timestamp,
+ikke radnummer: manglende input eller target gir derfor ikke en prediksjon og
+kan aldri føre til at et målegap hoppes over. MAE er hovedmetrikken, med RMSE
+som støttemål. Se den genererte [EDA- og baseline-rapporten](docs/traffic-eda-baseline.md)
+for funn og resultater.
+
+Neste steg er å trene og validere modeller mot baselinen, deretter legge til
+værdata.
 
 Se [datafeasibility-guiden](docs/data-feasibility.md) for detaljer om API,
 datakvalitet og målegap.
