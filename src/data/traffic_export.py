@@ -36,6 +36,15 @@ def read_hourly_traffic_export(path: str | Path) -> pd.DataFrame:
             "traffic_volume": pd.to_numeric(raw[volume_column], errors="coerce"),
         }
     )
+    optional_columns = {
+        "Trafikkregistreringspunkt": "traffic_point_id",
+        "Navn": "traffic_point_name",
+        "Vegreferanse": "road_reference",
+        "Dekningsgrad (%)": "coverage_percent",
+    }
+    for source_column, target_column in optional_columns.items():
+        if source_column in raw.columns:
+            result[target_column] = raw[source_column].to_numpy()
     return result.sort_values("timestamp").reset_index(drop=True)
 
 
