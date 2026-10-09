@@ -9,7 +9,7 @@ import pandas as pd
 
 from src.evaluation.model_evaluation import complete_model_rows, error_summary, evaluate_predictions
 from src.evaluation.traffic_eda import assign_chronological_split, prepare_traffic_for_eda
-from src.features.build_features import FEATURE_COLUMNS, create_features
+from src.features.build_features import FEATURE_COLUMNS, create_features, feature_columns
 from src.models.baselines import previous_week_forecast_baseline
 from src.models.train import train_model
 
@@ -29,22 +29,27 @@ def _markdown_table(data: pd.DataFrame) -> str:
     )
 
 
-def _predict(model_data: pd.DataFrame, model_name: str, train_data: pd.DataFrame) -> pd.Series:
-    model = train_model(train_data, FEATURE_COLUMNS, model_name)
-    prediction = pd.Series(model.predict(model_data[list(FEATURE_COLUMNS)]), index=model_data.index)
+def _predict(
+    model_data: pd.DataFrame, model_name: str, train_data: pd.DataFrame, columns: tuple[str, ...] = FEATURE_COLUMNS
+) -> pd.Series:
+    model = train_model(train_data, columns, model_name)
+    prediction = pd.Series(model.predict(model_data[list(columns)]), index=model_data.index)
     return prediction.rename(model_name)
 
 
-def run_experiment(data: pd.DataFrame) -> tuple[pd.DataFrame, str, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def run_experiment(
+    data: pd.DataFrame, weather_columns: tuple[str, ...] = ()
+) -> tuple[pd.DataFrame, str, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Select by validation MAE, then evaluate the selected setup once on test."""
     prepared = prepare_traffic_for_eda(data)
-    features = create_features(prepared)
+    columns = feature_columns(weather_columns)
+    features = create_features(prepared, weather_columns=weather_columns)
     # The split belongs to the prediction target at t + 1, not to the
     # feature timestamp at t. This preserves the stated calendar periods.
     target_times = prepared.copy()
     target_times["local_timestamp"] = target_times["local_timestamp"] + pd.Timedelta(hours=1)
     features["split"] = assign_chronological_split(target_times)
-    model_rows = complete_model_rows(features, FEATURE_COLUMNS)
+    model_rows = complete_model_rows(features, columns)
     raw_baseline = previous_week_forecast_baseline(prepared)
     baseline = raw_baseline.reindex(model_rows.index)
     train_rows = model_rows.loc[model_rows["split"].eq("train")]
@@ -53,7 +58,7 @@ def run_experiment(data: pd.DataFrame) -> tuple[pd.DataFrame, str, pd.DataFrame,
 
     validation_results = []
     for model_name in ("linear_regression", "hist_gradient_boosting"):
-        prediction = _predict(validation_rows, model_name, train_rows)
+        prediction = _predict(validation_rows, model_name, train_rows, columns)
         validation_results.append({"model": model_name, **evaluate_predictions(validation_rows["target_traffic"], prediction)})
     validation_results.append(
         {"model": "previous_week_baseline", **evaluate_predictions(validation_rows["target_traffic"], baseline.loc[validation_rows.index])}
@@ -63,7 +68,7 @@ def run_experiment(data: pd.DataFrame) -> tuple[pd.DataFrame, str, pd.DataFrame,
     if selected == "previous_week_baseline":
         raise RuntimeError("The baseline won validation; no ML model was selected")
 
-    selected_prediction = _predict(test_rows, selected, pd.concat([train_rows, validation_rows]))
+    selected_prediction = _predict(test_rows, selected, pd.concat([train_rows, validation_rows]), columns)
     test_results = pd.DataFrame(
         [
             {"model": selected, **evaluate_predictions(test_rows["target_traffic"], selected_prediction)},
