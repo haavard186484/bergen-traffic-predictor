@@ -3,9 +3,9 @@
 En maskinlæringsapplikasjon som predikerer antall kjøretøy ved ett
 trafikkregistreringspunkt i Bergen én time frem i tid.
 
-Prosjektet bruker historiske trafikkdata fra Statens vegvesen og kan utvides
-med historiske værdata fra MET Norway / Frost. Første versjon arbeider med
-timedata for ett valgt målepunkt.
+Prosjektet bruker historiske trafikkdata fra Statens vegvesen og kan hente
+historiske værdata fra MET Norway / Frost. Første versjon arbeider med timedata
+for ett valgt målepunkt.
 
 ## Kom i gang
 
@@ -104,8 +104,52 @@ berører et kjent målegap.
 Se [datafeasibility-guiden](docs/data-feasibility.md) for detaljer om API,
 datakvalitet og målegap.
 
+## Værdata fra MET Norway / Frost
+
+Den reproduserbare Frost-klienten henter timeserier fra standardstasjonen
+Bergen - Florida (`SN50540`) for temperatur, timesnedbør og vindhastighet.
+Opprett en Frost client ID og angi den kun i miljøet; den skal aldri stå i en
+fil som committes:
+
+```bash
+export FROST_CLIENT_ID='din-client-id'
+make download-weather
+```
+
+Dette skriver genererte, ignorerte data til `data/processed/weather_hourly.csv`
+og en sidecar-metadatafil. Metadataen dokumenterer Frost-kilde, hentetid,
+stasjon, periode, elementer, tidsserie-tilgjengelighet og observert/manglende
+dekning. Vær og trafikk kobles på UTC-`timestamp`; alle tidsstempel beholdes
+med tidssone under behandling.
+
+Frosts `referenceTime` angir observasjonstid, ikke publiseringstid. Den
+lekkasjesikre løsningen bruker derfor aldri vær ved `t`, men eksakte
+temperatur-, nedbør- og vindlag fra `t − 1`, `t − 2` og `t − 24` timer. Én
+times forsinkelse er en bevisst konservativ prosjektantakelse; et målegap i
+vær gir manglende features og fylles ikke. Se
+[værdatadokumentasjonen](docs/weather-data.md) for stasjon, mangler og
+begrensningen.
+
+Værmodellene evalueres uten å bruke 2025-testen i modellvalg:
+
+```bash
+python -m scripts.run_weather_model --weather data/processed/weather_hourly.csv
+```
+
+Den gjenbruker samme feature- og treningskode og sammenligner
+`HistGradientBoostingRegressor` med og uten vær på identiske gyldige rader i
+2024. SN50540-dekningen for 2022--2025 er 35 016/35 064 timer for temperatur
+og nedbør, og 34 458/35 064 for vind; mangler fylles ikke.
+
+På 8 126 felles, gyldige forecast-rader i 2024 fikk HGB uten vær MAE 103,41
+og RMSE 163,28. HGB med vær-lag fikk MAE 106,73 og RMSE 168,87; forrige-
+uke-baseline fikk MAE 201,86. Vær-lagene ble derfor ikke valgt og ble ikke
+evaluert på 2025-testen. Dagens valgte modell er fortsatt trafikk-HGB med
+tidligere rapportert full test-MAE 106,22. Se
+[værmodellrapporten](docs/weather-model.md).
+
 ## Status
 
 Trafikkdata, EDA, baseline og første lekkasjesikre ML-modell for Danmarks plass
-er etablert. Neste naturlige steg er å vurdere værdata som var tilgjengelige
-ved prediksjonstidspunktet.
+er etablert. Historisk Frost-nedlasting og konservative vær-lag er klare for
+validering på samme 2024-periode.

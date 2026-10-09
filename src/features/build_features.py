@@ -4,8 +4,10 @@ import numpy as np
 import pandas as pd
 
 from src.config import TARGET_COLUMN, TIMEZONE
+from src.data.frost import WEATHER_COLUMNS
 
 TRAFFIC_LAGS = (1, 2, 24, 168)
+WEATHER_LAGS = (1, 2, 24)
 FEATURE_COLUMNS = (
     "hour",
     "day_of_week",
@@ -17,7 +19,22 @@ FEATURE_COLUMNS = (
 )
 
 
-def create_features(data: pd.DataFrame, traffic_column: str = "traffic_volume") -> pd.DataFrame:
+def feature_columns(weather_columns: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """Return the common model schema, optionally augmented with weather."""
+    unexpected = set(weather_columns).difference(WEATHER_COLUMNS)
+    if unexpected:
+        raise ValueError(f"Unsupported weather columns: {sorted(unexpected)}")
+    weather_lag_columns = tuple(
+        f"{column}_{hours}h_ago" for column in weather_columns for hours in WEATHER_LAGS
+    )
+    return (*FEATURE_COLUMNS, *weather_lag_columns)
+
+
+def create_features(
+    data: pd.DataFrame,
+    traffic_column: str = "traffic_volume",
+    weather_columns: tuple[str, ...] = (),
+) -> pd.DataFrame:
     """Create one-hour-ahead target and features known at each timestamp.
 
     Every lag and the target is looked up by its exact timestamp, rather than
@@ -25,7 +42,7 @@ def create_features(data: pd.DataFrame, traffic_column: str = "traffic_volume") 
     the hourly axis contains a gap, rather than allowing a value to jump over
     that gap. Calendar values use Europe/Oslo, while timestamps remain UTC.
     """
-    required = {"timestamp", traffic_column}
+    required = {"timestamp", traffic_column, *weather_columns}
     missing = required.difference(data.columns)
     if missing:
         raise ValueError(f"Missing required columns: {sorted(missing)}")
@@ -52,4 +69,14 @@ def create_features(data: pd.DataFrame, traffic_column: str = "traffic_volume") 
         ).to_numpy()
 
     features[TARGET_COLUMN] = observed.reindex(timestamp + pd.Timedelta(hours=1)).to_numpy()
+
+    for column in weather_columns:
+        observed_weather = pd.Series(features[column].to_numpy(), index=timestamp)
+        for hours in WEATHER_LAGS:
+            # The fixed one-hour minimum delay is a documented conservative
+            # operational assumption. Exact timestamp lookup prevents a value
+            # from being shifted across a missing weather observation.
+            features[f"{column}_{hours}h_ago"] = observed_weather.reindex(
+                timestamp - pd.Timedelta(hours=hours)
+            ).to_numpy()
     return features
