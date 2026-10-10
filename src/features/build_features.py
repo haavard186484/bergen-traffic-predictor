@@ -5,6 +5,10 @@ import pandas as pd
 
 from src.config import TARGET_COLUMN, TIMEZONE
 from src.data.frost import WEATHER_COLUMNS
+from src.features.calendar_events import (
+    CALENDAR_EVENT_FEATURE_COLUMNS,
+    add_norwegian_calendar_event_features,
+)
 
 TRAFFIC_LAGS = (1, 2, 24, 168)
 WEATHER_LAGS = (1, 2, 24)
@@ -19,7 +23,9 @@ FEATURE_COLUMNS = (
 )
 
 
-def feature_columns(weather_columns: tuple[str, ...] = ()) -> tuple[str, ...]:
+def feature_columns(
+    weather_columns: tuple[str, ...] = (), calendar_event_features: bool = False
+) -> tuple[str, ...]:
     """Return the common model schema, optionally augmented with weather."""
     unexpected = set(weather_columns).difference(WEATHER_COLUMNS)
     if unexpected:
@@ -27,13 +33,15 @@ def feature_columns(weather_columns: tuple[str, ...] = ()) -> tuple[str, ...]:
     weather_lag_columns = tuple(
         f"{column}_{hours}h_ago" for column in weather_columns for hours in WEATHER_LAGS
     )
-    return (*FEATURE_COLUMNS, *weather_lag_columns)
+    calendar_columns = CALENDAR_EVENT_FEATURE_COLUMNS if calendar_event_features else ()
+    return (*FEATURE_COLUMNS, *calendar_columns, *weather_lag_columns)
 
 
 def create_features(
     data: pd.DataFrame,
     traffic_column: str = "traffic_volume",
     weather_columns: tuple[str, ...] = (),
+    calendar_event_features: bool = False,
 ) -> pd.DataFrame:
     """Create one-hour-ahead target and features known at each timestamp.
 
@@ -62,6 +70,10 @@ def create_features(
     features["is_weekend"] = (features["day_of_week"] >= 5).astype(int)
     features["hour_sin"] = np.sin(2 * np.pi * features["hour"] / 24)
     features["hour_cos"] = np.cos(2 * np.pi * features["hour"] / 24)
+    features["local_timestamp"] = local_timestamp
+
+    if calendar_event_features:
+        features = add_norwegian_calendar_event_features(features)
 
     for hours in TRAFFIC_LAGS:
         features[f"traffic_{hours}h_ago"] = observed.reindex(

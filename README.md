@@ -148,6 +148,62 @@ evaluert på 2025-testen. Dagens valgte modell er fortsatt trafikk-HGB med
 tidligere rapportert full test-MAE 106,22. Se
 [værmodellrapporten](docs/weather-model.md).
 
+## Feilanalyse av valgt modell
+
+Kjør den reproduserbare, diagnostiske 2024-analysen med lokale trafikk- og
+værdata:
+
+```bash
+python -m scripts.run_model_evaluation
+```
+
+Den skriver [feilanalyserapporten](docs/model-evaluation.md). Trafikk-HGB
+trenes da kun på 2022--2023, og analysen bruker 2024-valideringen; 2025-testen
+leses eller brukes ikke. Rapporten fordeler feil etter lokal time, ukedag og
+måned, undersøker datoer med store feil og grupperer dem etter Frost-vær ved
+`t - 1` (regn, vind og temperatur). Væropplysningene er diagnostiske, ikke
+nye modellfeatures, og Frost-mangler holdes eksplisitte uten imputering.
+
+## Kalenderfeatures og videre modellvalg
+
+Helligdags- og høytidsindikatorer evalueres uten å bruke 2025:
+
+```bash
+python -m scripts.run_calendar_model
+```
+
+Dette skriver [kalender-modellrapporten](docs/calendar-model.md). Kandidaten
+velges på ekspanderende tidsserie-kryssvalidering i 2022--2023 og bruker bare
+deterministisk kalenderinformasjon i `Europe/Oslo`. 2024 rapporteres
+etterfølgende for den CV-valgte kandidaten, men er ikke et uavhengig testsett
+fordi perioden allerede er brukt i tidligere eksperimenter. 2025 forblir
+urørt for videre feature- og modellvalg. Kalender-HGB er foreløpig å
+foretrekke: gjennomsnittlig CV-MAE er 119,69 mot 120,03 uten kalenderfeatures,
+og den etterfølgende 2024-MAE er 99,83. Den lille CV-forskjellen tilsier at
+featurelisten må fryses før en eventuell senere, én-gangs sluttevaluering.
+
+## Frosset kalender- og værmodell
+
+Når den siste, forhåndsdefinerte værpakken skal vurderes og modellen fryses,
+kjør:
+
+```bash
+python -m scripts.run_final_model_evaluation
+```
+
+Kommandoen velger mellom kalender-HGB og kalender-HGB med avledet vær kun fra
+ekspanderende CV i 2022--2023. Værpakken består av akkumulert nedbør,
+regnstart/rush-interaksjon og sesongjustert temperatur og vind, alle basert på
+observasjoner senest ved `t - 1`. Den skriver
+[sluttrapporten](docs/final-model-evaluation.md), evaluerer den frosne
+kandidaten én gang på 2025, og lagrer modell samt feature-metadata lokalt i
+`models/`. Modellartefaktene er ignorert av Git. 2025-resultatet skal ikke
+brukes til ytterligere modellvalg.
+
+Den frosne `traffic-hgb-calendar-v1`-modellen ble valgt: værpakken tapte alle
+tre 2022--2023-folds og inngår ikke i den endelige featurelisten. Sluttmålingen
+på 2025 sammenlignes med forrige-uke-baselinen på identiske forecast-rader.
+
 ## Status
 
 Trafikkdata, EDA, baseline og første lekkasjesikre ML-modell for Danmarks plass
