@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from src.config import MODEL_VERSION
 from src.evaluation.calendar_model_evaluation import CALENDAR_CV_FOLDS
 from src.evaluation.metrics import regression_metrics
 from src.evaluation.model_evaluation import complete_model_rows
@@ -19,9 +20,10 @@ from src.features.weather_derivatives import (
 from src.models.baselines import previous_week_forecast_baseline
 from src.models.train import train_model
 
+__all__ = ["MODEL_VERSION"]
+
 CALENDAR_COLUMNS = feature_columns(calendar_event_features=True)
 WEATHER_COLUMNS = (*CALENDAR_COLUMNS, *DERIVED_WEATHER_FEATURE_COLUMNS)
-MODEL_VERSION = "traffic-hgb-calendar-v1"
 
 
 @dataclass(frozen=True)
