@@ -24,17 +24,30 @@ FEATURE_COLUMNS = (
 
 
 def feature_columns(
-    weather_columns: tuple[str, ...] = (), calendar_event_features: bool = False
+    weather_columns: tuple[str, ...] = (),
+    calendar_event_features: bool = False,
+    traffic_lags: tuple[int, ...] = TRAFFIC_LAGS,
 ) -> tuple[str, ...]:
     """Return the common model schema, optionally augmented with weather."""
     unexpected = set(weather_columns).difference(WEATHER_COLUMNS)
     if unexpected:
         raise ValueError(f"Unsupported weather columns: {sorted(unexpected)}")
+    if not traffic_lags or any(hours < 1 for hours in traffic_lags):
+        raise ValueError("traffic_lags must contain positive hour offsets")
+    traffic_lag_columns = tuple(f"traffic_{hours}h_ago" for hours in traffic_lags)
     weather_lag_columns = tuple(
         f"{column}_{hours}h_ago" for column in weather_columns for hours in WEATHER_LAGS
     )
     calendar_columns = CALENDAR_EVENT_FEATURE_COLUMNS if calendar_event_features else ()
-    return (*FEATURE_COLUMNS, *calendar_columns, *weather_lag_columns)
+    calendar_feature_columns = tuple(
+        column for column in FEATURE_COLUMNS if not column.startswith("traffic_")
+    )
+    return (
+        *calendar_feature_columns,
+        *traffic_lag_columns,
+        *calendar_columns,
+        *weather_lag_columns,
+    )
 
 
 def create_features(
@@ -42,6 +55,7 @@ def create_features(
     traffic_column: str = "traffic_volume",
     weather_columns: tuple[str, ...] = (),
     calendar_event_features: bool = False,
+    traffic_lags: tuple[int, ...] = TRAFFIC_LAGS,
 ) -> pd.DataFrame:
     """Create one-hour-ahead target and features known at each timestamp.
 
@@ -75,7 +89,9 @@ def create_features(
     if calendar_event_features:
         features = add_norwegian_calendar_event_features(features)
 
-    for hours in TRAFFIC_LAGS:
+    if not traffic_lags or any(hours < 1 for hours in traffic_lags):
+        raise ValueError("traffic_lags must contain positive hour offsets")
+    for hours in traffic_lags:
         features[f"traffic_{hours}h_ago"] = observed.reindex(
             timestamp - pd.Timedelta(hours=hours)
         ).to_numpy()

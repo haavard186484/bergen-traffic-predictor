@@ -204,33 +204,53 @@ Den frosne `traffic-hgb-calendar-v1`-modellen ble valgt: værpakken tapte alle
 tre 2022--2023-folds og inngår ikke i den endelige featurelisten. Sluttmålingen
 på 2025 sammenlignes med forrige-uke-baselinen på identiske forecast-rader.
 
-## Streamlit-prediksjon
+## Latensrobust modell og Streamlit-app
 
-Generer først den lokale, ignorerte modellartefakten fra det lokale
-trafikkdatasettet, og start deretter appen:
+Den tidligere modellen krevde de nyligste trafikkobservasjonene (`t - 1` og
+`t - 2`), som ikke alltid er publisert når en forecast skal lages. Den frosne
+latensrobuste modellen `traffic-hgb-latency-robust-v1` bruker i stedet bare
+deterministiske norske kalenderfeatures og trafikk-lagene `t - 24`, `t - 48`
+og `t - 168`. Target er fortsatt trafikkvolumet ved `t + 1`. Det brukes ikke
+Frost, `FROST_CLIENT_ID` eller andre datakilder.
+
+Kandidatlisten ble bestemt før resultater ble inspisert og besto av HGB med
+lagpakkene `(24, 168)`, `(24, 48, 168)` og `(24, 168, 336)`. Kun
+ekspanderende CV i 2022--2023 ble brukt til valg. Vinneren var pakken
+`(24, 48, 168)` med gjennomsnittlig CV-MAE 133,77. 2025 var låst og ble ikke
+brukt til kandidatvalg. Etter frysing ble modellen trent på 2022--2025 og
+målt én gang på den nye perioden 2026 H1:
+
+| periode | modell | MAE | RMSE | gyldige, delte forecast-rader |
+| --- | --- | ---: | ---: | ---: |
+| 2026 H1 | latency-robust HGB | 108,81 | 161,85 | 4 343 |
+| 2026 H1 | forrige uke-baseline | 211,79 | 454,47 | 4 343 |
+
+Resultatet, inklusive feilanalyse per forecast-time og -ukedag, gjenskapes
+med følgende kommando. Den leser bare `data/processed/traffic_hourly.csv` og
+lagrer en ignorert artefakt i `models/`:
 
 ```bash
-python -m scripts.run_final_model_evaluation
-streamlit run app/streamlit_app.py
+python -m scripts.run_latency_robust_model
 ```
 
-Appen laster den frosne `traffic-hgb-calendar-v1`-artefakten fra
-`models/traffic_hgb_v2.joblib`. For forecast-tidspunktet `t` (tolket i
-`Europe/Oslo`) henter den observerte trafikkvolumer fra Traffic Data API ved
-nøyaktig `t - 1`, `t - 2`, `t - 24` og `t - 168` timer. Appen bygger kalender-
-og trafikkfeatures med samme kode som treningen, og nekter å predikere dersom
-API-et feiler eller nødvendig historikk mangler eller ikke er et endelig tall.
-Ferdig aggregerte timesverdier publiseres med forsinkelse; appen foreslår derfor
-et forecast-tidspunkt tre timer tilbake i tid. Forecast-tidspunktet må være på
-hel time, siden API-et bare leverer timesaggregater. Velg en eldre time dersom
-API-et rapporterer manglende historikk for et helt nylig tidspunkt.
+Datasettet må omfatte 2026 H1; hent samme Statens vegvesen-timeserie og bygg
+det lokale datasettet fra de to råfilene slik:
 
-Den frosne modellen bruker trafikkhistorikk og deterministiske norske
-kalenderfeatures, men ingen Frost-værfeatures, værvarsel eller
-`FROST_CLIENT_ID`. Sluttevalueringen på 2025 ble gjort én gang etter CV-valget:
-MAE 102,35 og RMSE 149,62 på 8 760 forecast-rader, mot forrige-uke-baselinens
-MAE 191,73 og RMSE 398,95 på de samme radene. Dette resultatet skal ikke brukes
-til videre modell- eller featurevalg.
+```bash
+python -m scripts.download_traffic_data \
+  --point-id 14630V805616 \
+  --from 2026-01-01T00:00:00+01:00 \
+  --to 2026-07-01T00:00:00+02:00 \
+  --output data/raw/traffic_2026_h1.csv
+python -m scripts.prepare_traffic_dataset \
+  data/raw/traffic_2022_2025.csv data/raw/traffic_2026_h1.csv --allow-gaps
+```
+
+Start deretter appen med `streamlit run app/streamlit_app.py`. Appen henter
+kun de nødvendige historiske lagene fra Traffic Data API, viser mottatte
+inputverdier og håndterer API-feil, målegap og manglende modellartefakt.
+Siden den ikke krever siste times observasjon, kan den lage forecast selv når
+den nyligste publiserte timeserien er forsinket.
 
 ## Status
 
