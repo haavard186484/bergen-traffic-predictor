@@ -204,6 +204,34 @@ Den frosne `traffic-hgb-calendar-v1`-modellen ble valgt: værpakken tapte alle
 tre 2022--2023-folds og inngår ikke i den endelige featurelisten. Sluttmålingen
 på 2025 sammenlignes med forrige-uke-baselinen på identiske forecast-rader.
 
+## Streamlit-prediksjon
+
+Generer først den lokale, ignorerte modellartefakten fra det lokale
+trafikkdatasettet, og start deretter appen:
+
+```bash
+python -m scripts.run_final_model_evaluation
+streamlit run app/streamlit_app.py
+```
+
+Appen laster den frosne `traffic-hgb-calendar-v1`-artefakten fra
+`models/traffic_hgb_v2.joblib`. For forecast-tidspunktet `t` (tolket i
+`Europe/Oslo`) henter den observerte trafikkvolumer fra Traffic Data API ved
+nøyaktig `t - 1`, `t - 2`, `t - 24` og `t - 168` timer. Appen bygger kalender-
+og trafikkfeatures med samme kode som treningen, og nekter å predikere dersom
+API-et feiler eller nødvendig historikk mangler eller ikke er et endelig tall.
+Ferdig aggregerte timesverdier publiseres med forsinkelse; appen foreslår derfor
+et forecast-tidspunkt tre timer tilbake i tid. Forecast-tidspunktet må være på
+hel time, siden API-et bare leverer timesaggregater. Velg en eldre time dersom
+API-et rapporterer manglende historikk for et helt nylig tidspunkt.
+
+Den frosne modellen bruker trafikkhistorikk og deterministiske norske
+kalenderfeatures, men ingen Frost-værfeatures, værvarsel eller
+`FROST_CLIENT_ID`. Sluttevalueringen på 2025 ble gjort én gang etter CV-valget:
+MAE 102,35 og RMSE 149,62 på 8 760 forecast-rader, mot forrige-uke-baselinens
+MAE 191,73 og RMSE 398,95 på de samme radene. Dette resultatet skal ikke brukes
+til videre modell- eller featurevalg.
+
 ## Status
 
 Trafikkdata, EDA, baseline og første lekkasjesikre ML-modell for Danmarks plass
