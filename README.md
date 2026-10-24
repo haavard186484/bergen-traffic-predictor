@@ -254,10 +254,41 @@ allerede finnes, er `make train-latency-robust-model` tilstrekkelig for å lage
 artefakten på nytt.
 
 Start deretter appen med `streamlit run app/streamlit_app.py`. Appen henter
-kun de nødvendige historiske lagene fra Traffic Data API, viser mottatte
-inputverdier og håndterer API-feil, målegap og manglende modellartefakt.
-Siden den ikke krever siste times observasjon, kan den lage forecast selv når
-den nyligste publiserte timeserien er forsinket.
+trafikkhistorikk fra Traffic Data API for biltrafikk ved Danmarks plass
+(`14630V805616`). Velg «Neste time» (standard) eller en historisk dato og time,
+og trykk «Vis prognose». Appen viser et prognosekort i kjøretøy/time og det
+eksakte timeintervallet i `Europe/Oslo`, med UTC-offset. Ved overgang til
+vintertid kan begge forekomster av samme klokkeslett velges; ikke-eksisterende
+timer ved overgang til sommertid tilbys ikke. «Neste time» beregnes i UTC,
+slik at intervallet alltid er én faktisk time.
+
+Sammenligningen er observert trafikk ved **target−168 timer**, altså **t−167**
+når target=t+1. Den er separat fra modellens t−168-feature. Ved overgang til
+sommertid/vintertid kan lokal klokkeslett derfor avvike fra target. Appen viser
+prosentforskjellen `(prognose / observasjon − 1) × 100` bare når observasjonen
+er positiv. Manglende sammenligningsdata blokkerer ikke en gyldig prognose.
+
+Grafen viser observasjoner i de siste 72 timene før target og prognosen som
+en separat diamant. Manglende timer og nullverdier beholdes som hull, uten
+imputering eller linjer over gapene. Prognosen gjelder kun registreringspunktet,
+ikke all trafikk på Danmarks plass. Tekniske input og modellmetadata finnes i
+en utfellbar seksjon. Modell, features og evalueringsresultater er uendret.
+
+Datastatus viser kilde, hentetidspunkt og siste tilgjengelige observasjon i
+uttrekket. API-feil, manglende modellartefakt og manglende nødvendige lag gir
+meldinger med neste steg. Hvert klikk henter data på nytt; det kreves ingen
+API-nøkler eller nye miljøvariabler. Siden modellen ikke krever siste times
+observasjon, tåler den forsinket publisering. Historiske oppslag bruker dagens
+API-data; tidligere publiseringstidspunkt rekonstrueres ikke. Historiske
+prognoser innen treningsperioden er demonstrasjoner, ikke ny testevaluering.
+
+Dashboardets tema ligger i `.streamlit/config.toml`. Kjør kontrollene med:
+
+```bash
+pytest
+ruff check .
+ruff format --check app/streamlit_app.py tests/test_streamlit_app.py
+```
 
 ## Status
 
