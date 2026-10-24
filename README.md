@@ -15,7 +15,7 @@ En kort demonstrasjon av prognoseappen:
 
 
 
-https://github.com/user-attachments/assets/46ba529c-b5d3-42d7-84ff-ce183e59f655
+https://github.com/user-attachments/assets/5598cc2d-ddde-4813-93b8-5eb32f29f990
 
 
 
