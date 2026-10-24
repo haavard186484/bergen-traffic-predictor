@@ -1,0 +1,84 @@
+\section{Deployment}
+
+\subsection{Bygging, lagring og lasting}
+
+Sluttproduktet er en lokal Streamlit-demonstrasjon, ikke en offentlig driftet
+tjeneste. Repositoryets \texttt{make build-app-model} kjører tre eksplisitte steg:
+nedlasting av trafikkdata, normalisering med bevarte målegap og training av den
+frozen kandidaten. Training-scriptet gjenskaper CV-rapporten og sluttevalueringen,
+trener modellen på alle gyldige rader før 1. januar 2026 og lagrer et Joblib-bundle
+i \texttt{models/traffic\_hgb\_latency\_robust\_v1.joblib}. Bundle-filen inneholder
+den trente HGB-en, den ordnede feature-listen og metadata om modellversjon,
+lagpakke, utvalgsperiode, treningsperiode og datakilde. Den tilhørende JSON-filen
+viser 34 159 treningsrader.
+
+Joblib gir \texttt{dump} og \texttt{load} for serialisering av Python-objekter
+\cite{joblib-persistence}. Artefakten er ignorert av Git og må bygges lokalt. Appen
+laster bare den forventede lokale filen og gir en konkret byggekommando dersom den
+mangler eller ikke kan leses. Fordi Joblib bygger på pickle, bør en operativ løsning
+aldri laste en modellfil fra en uklar eller ukontrollert kilde.
+
+\subsection{Brukerflyt og prognose}
+
+Appen startes med \texttt{streamlit run app/streamlit\_app.py}. Streamlit er et
+Python-rammeverk for interaktive dataapplikasjoner \cite{streamlit-docs}. Brukeren
+velger enten \enquote{Neste time} eller et historisk tidspunkt og trykker
+\enquote{Vis prognose}. Historiske valg begrenses til reelle lokale klokketimer:
+begge forekomster av en gjentatt time ved vintertid kan velges, mens en
+ikke-eksisterende time ved sommertid ikke tilbys. Prognoseintervallet vises med
+UTC-offset og \texttt{Europe/Oslo}.
+
+Ved hvert klikk lastes modellen, og appen henter nødvendig historikk fra Traffic Data
+API. Target-tidspunktet kalles $t+1$, og feature-ankeret er $t$. Featurekoden bygger
+kalenderverdier og slår opp trafikk ved $t-24$, $t-48$ og $t-168$. Hvis en av disse
+verdiene mangler, blir det ingen prediksjon. Hvis alle finnes, viser appen forventet
+biltrafikk i kjøretøy per time, en graf med de siste 72 timene og en separat diamant
+for prognosen. Målegap og upubliserte timer vises som åpne hull, uten linjer som
+skjuler manglende data.
+
+Appens sammenligning med forrige uke må ikke forveksles med modellfeaturen. UI-et
+viser observert trafikk ved \emph{target minus 168 timer}. Siden target er $t+1$,
+tilsvarer dette $t-167$. Dette er samme tidsposisjon som den operative
+forrige-uke-baselinen bruker. Modellens feature ved $t-168$ er derimot knyttet til
+feature-ankeret og ligger 169 timer før target. Verdiene har derfor ulike timestamps,
+selv om begge omtales som ukentlig historikk. Ved sommertid og vintertid kan også
+lokalt klokkeslett forskyves når forskjellen beregnes som eksakt forløpt tid.
+
+Sammenligningsverdien er valgfri: mangler den, kan en gyldig modellprognose fortsatt
+vises. Prosentforskjellen beregnes bare når sammenligningen er positiv. En utfellbar
+seksjon viser modellnavn, features, evalueringsresultat og de konkrete inputverdiene.
+Datastatus viser kilde, hentetidspunkt og siste tilgjengelige observasjon i uttrekket.
+
+\subsection{Feilhåndtering, demonstrasjon og drift}
+
+Appen skiller mellom manglende eller skadet modellartefakt, feil fra API-et og
+utilstrekkelig trafikkhistorikk. Brukeren får et kort neste steg, mens tekniske
+detaljer om manglende input kan åpnes ved behov. Hvert klikk gjør et nytt API-kall;
+det brukes ingen cache eller lokal database i denne versjonen. Historiske prognoser
+bruker data som er tilgjengelige nå. De rekonstruerer ikke hva API-et hadde
+publisert på det historiske prognosetidspunktet, og prognoser innen treningsperioden
+er demonstrasjoner, ikke nye testresultater.
+
+En videodemonstrasjon er lenket fra prosjektets README og oppfyller oppgavens krav
+om å vise nettsiden uten offentlig hosting:
+\href{https://github.com/user-attachments/assets/5598cc2d-ddde-4813-93b8-5eb32f29f990}{Bergen
+Traffic Predictor videodemonstrasjon}. Løsningen kan kjøres på en vanlig lokal
+datamaskin med Python 3.11 eller nyere. Den krever ingen Frost-nøkkel fordi vær ikke
+inngår i sluttproduktet.
+
+Før reell drift må systemet få vedvarende logging og monitorering. Minstekrav er
+API-feilrate, andel prognoser som mangler ett eller flere lag, alder på siste
+observasjon og endringer i fordelingen av trafikkvolum. Når target senere blir
+observert, bør MAE og RMSE følges over tid og fordeles på time og ukedag. Vedvarende
+avvik kan skyldes datadrift, sensorendring, vegomlegging eller endret reisemønster.
+Modellen bør trenes på nytt etter en fast vurderingsplan eller ved dokumentert drift,
+men en ny versjon må velges på kronologisk validering og måles på en ny, urørt
+periode. API-tilgjengelighet, datalisens, artefaktintegritet og en manuell
+reserveprognose må også inngå i en produksjonsplan.
+
+Monitoreringen bør skille datafeil fra modelldrift. Manglende lag eller en plutselig
+økning i API-feil peker mot datakjeden, mens stabile input med økende prediction error
+kan tyde på model drift. Modell- og dataversjon bør logges sammen med hver
+prognose slik at en feil kan spores. Før automatisk retrening innføres, må det finnes
+en godkjenningsmekanisme som hindrer at et midlertidig målegap eller en unormal
+periode blir gjort til ny normal.

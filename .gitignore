@@ -251,3 +251,6 @@ $RECYCLE.BIN/
 .vscode/*.code-workspace
 
 local_files/
+
+# LaTeX report intermediates (the finished PDF is versioned)
+report/build/

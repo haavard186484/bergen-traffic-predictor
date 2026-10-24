@@ -4,7 +4,7 @@ TRAFFIC_FROM ?= 2022-01-01T00:00:00+01:00
 TRAFFIC_TO ?= 2026-07-01T00:00:00+02:00
 RAW_TRAFFIC ?= data/raw/traffic_2022_2026_h1.csv
 
-.PHONY: download-traffic prepare-traffic refresh-traffic train-latency-robust-model build-app-model download-weather test
+.PHONY: download-traffic prepare-traffic refresh-traffic train-latency-robust-model build-app-model download-weather test report
 
 download-traffic:
 	$(PYTHON) -m scripts.download_traffic_data \
@@ -28,3 +28,6 @@ download-weather:
 
 test:
 	$(PYTHON) -m pytest
+
+report:
+	$(MAKE) -C report

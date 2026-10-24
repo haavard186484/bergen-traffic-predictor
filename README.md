@@ -9,6 +9,18 @@ Den predikerer trafikkvolum én time frem i tid fra kalenderfeatures og eksakte
 trafikklag ved `t-24`, `t-48` og `t-168`. Historiske forsøk med Frost-værdata
 er dokumentert nedenfor, men inngår ikke i appen eller sluttmodellen.
 
+## Rapport
+
+Den ferdige prosjektrapporten kan åpnes direkte som
+[PDF](report/bergen-traffic-predictor-report.pdf). Bygg rapporten på nytt med:
+
+```bash
+make report
+```
+
+Bygget krever `latexmk`, pdfLaTeX, Biber og `texcount`. LaTeX-kildene og den
+reproduserbare figuren ligger i `report/`.
+
 ## Videodemonstrasjon
 
 En kort demonstrasjon av prognoseappen:
