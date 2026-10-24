@@ -4,7 +4,8 @@ TEXCOUNT ?= texcount
 
 PDF := bergen-traffic-predictor-report.pdf
 BUILD_DIR := build
-SOURCES := main.tex references.bib $(wildcard sections/*.tex) figures/pipeline.tex
+SOURCES := main.tex references.bib $(wildcard sections/*.tex) figures/pipeline.tex \
+	figures/danmarks_plass.png
 REPORT_DATA := figures/error_by_hour.csv figures/feature_importance.csv
 
 .PHONY: all clean count
