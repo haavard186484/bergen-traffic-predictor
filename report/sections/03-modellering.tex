@@ -75,6 +75,65 @@ fordi enkelte timer har store feil.
   \end{tabularx}
 \end{table}
 
+\subsection{Feature importance}
+
+For å undersøke hva den valgte modellen faktisk bygger prediction på, ble
+permutation feature importance beregnet med MAE som scoring. Modellen ble trent på
+nytt i hver av de tre kronologiske CV-foldene, og hver feature ble permutert 30
+ganger på foldens validation-data. Figur~\ref{fig:feature-importance} viser
+gjennomsnittlig økning i MAE; en høy positiv verdi betyr at modellen mister mye
+predictive performance når sammenhengen til target brytes. Analysen ble utført etter
+at kandidaten var frozen og ble ikke brukt til å endre modell eller features.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      xbar,
+      width=0.82\textwidth,
+      height=8.4cm,
+      xlabel={Økning i MAE (kjøretøy/time)},
+      table/col sep=comma,
+      ytick=data,
+      yticklabels from table={figures/feature_importance.csv}{label},
+      y dir=reverse,
+      xmajorgrids=true,
+      grid style={black!12},
+      axis line style={black!55},
+      tick style={black!55},
+      bar width=5pt,
+      enlarge y limits=0.035,
+      error bars/x dir=both,
+      error bars/x explicit
+    ]
+      \addplot[fill=reportblue!75, draw=reportblue]
+        table[
+          x=mean_delta_mae,
+          x error=std_delta_mae,
+          y expr=\coordindex,
+          col sep=comma
+        ]{figures/feature_importance.csv};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Cross-validated permutation feature importance for den frozen
+  latency-robust modellen. Error bars viser standardavvik over 90 permutasjoner
+  per feature, fordelt på tre validation-folds.}
+  \label{fig:feature-importance}
+\end{figure}
+
+Størst importance fikk \texttt{traffic\_168h\_ago} med en gjennomsnittlig
+MAE-økning på 394,64, etterfulgt av \texttt{hour\_cos} med 366,88,
+\texttt{traffic\_24h\_ago} med 223,15 og \texttt{day\_of\_week} med 182,21.
+Resultatet viser at modellen særlig støtter seg på ukerytme, døgnsyklus og trafikken
+ett døgn tidligere.
+
+Resultatet må tolkes som model reliance, ikke som en kausal effekt. Flere inputs
+deler informasjon: \texttt{hour}, \texttt{hour\_sin} og \texttt{hour\_cos} beskriver
+samme døgnsyklus, mens traffic lag features er korrelerte. Permutation importance
+kan derfor fordele eller undervurdere importance mellom slike features. Analysen
+gjelder dessuten bare features i sluttmodellen; konklusjonen om at vær ikke hjalp
+kommer fortsatt fra de separate weather-model-sammenligningene.
+
 \subsection{Feilanalyse}
 
 Figur~\ref{fig:hourly-error} viser MAE etter target-time i 2026 H1. Feilen er lavest
@@ -110,9 +169,8 @@ ikke bare kan reduseres til klassisk rushtrafikk.
 
 Etter ukedag varierer MAE fra 97,05 på tirsdag til 121,89 på lørdag. De øvrige
 dagene ligger mellom 100,14 og 112,98. Analysen viser når feilen er størst, men
-forklarer ikke årsaken alene. Prosjektet har ikke beregnet feature importance og
-rapporterer derfor ingen konstruert rangering. Aktuelle forbedringer må testes i en
-ny kronologisk valideringsrunde, for eksempel hendelsesdata eller bedre mål på
+forklarer ikke årsaken alene. Aktuelle forbedringer må testes i en ny kronologisk
+validation-runde, for eksempel hendelsesdata eller bedre mål på
 publiseringsforsinkelse, før en ny og senere testperiode åpnes.
 
 RMSE 161,85 mot MAE 108,81 viser at fordelingen inneholder noen større avvik. For

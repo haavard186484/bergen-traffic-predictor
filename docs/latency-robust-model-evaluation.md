@@ -30,6 +30,27 @@ Alle kandidatene bruker `HistGradientBoostingRegressor`, deterministiske norske 
 
 Kandidaten ble fryst kun på gjennomsnittlig CV-MAE: **traffic_hgb_calendar_lags_24_48_168**.
 
+## Cross-validated permutation feature importance
+
+Den valgte feature-pakken ble trent på nytt i hver av de tre kronologiske CV-foldene. Hver feature ble permutert 30 ganger på foldens validation-data. En positiv verdi er gjennomsnittlig økning i MAE, målt i kjøretøy per time. Analysen beskriver modellens avhengighet av inputene og ble ikke brukt til å endre den frosne kandidaten.
+
+| feature | mean_delta_mae | std_delta_mae | folds | permutations |
+| --- | --- | --- | --- | --- |
+| traffic_168h_ago | 394.64 | 13.41 | 3 | 90 |
+| hour_cos | 366.88 | 24.19 | 3 | 90 |
+| traffic_24h_ago | 223.15 | 25.47 | 3 | 90 |
+| day_of_week | 182.21 | 11.64 | 3 | 90 |
+| hour | 153.33 | 9.75 | 3 | 90 |
+| hour_sin | 23.46 | 4.11 | 3 | 90 |
+| is_public_holiday | 19.94 | 16.09 | 3 | 90 |
+| month | 11.52 | 10.35 | 3 | 90 |
+| traffic_48h_ago | 11.30 | 4.68 | 3 | 90 |
+| is_christmas_new_year_period | 5.07 | 6.59 | 3 | 90 |
+| is_day_before_public_holiday | 1.74 | 1.66 | 3 | 90 |
+| is_day_after_public_holiday | 0.51 | 0.74 | 3 | 90 |
+| is_weekend | 0.00 | 0.00 | 3 | 90 |
+| is_constitution_day | 0.00 | 0.00 | 3 | 90 |
+
 2025 var låst fra forrige sluttevaluering og ble ikke brukt til kandidat-, feature- eller modellvalg. Etter frysing ble modellen trent på 2022–2025.
 
 ## Én sluttevaluering: 2026 H1

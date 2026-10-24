@@ -5,16 +5,16 @@ TEXCOUNT ?= texcount
 PDF := bergen-traffic-predictor-report.pdf
 BUILD_DIR := build
 SOURCES := main.tex references.bib $(wildcard sections/*.tex) figures/pipeline.tex
-ERROR_DATA := figures/error_by_hour.csv
+REPORT_DATA := figures/error_by_hour.csv figures/feature_importance.csv
 
 .PHONY: all clean count
 
 all: $(PDF)
 
-$(ERROR_DATA): scripts/generate_report_assets.py ../docs/latency-robust-model-evaluation.md
+$(REPORT_DATA): scripts/generate_report_assets.py ../docs/latency-robust-model-evaluation.md
 	$(PYTHON) scripts/generate_report_assets.py
 
-$(PDF): $(SOURCES) $(ERROR_DATA)
+$(PDF): $(SOURCES) $(REPORT_DATA)
 	mkdir -p $(BUILD_DIR)
 	$(LATEXMK) -pdf -interaction=nonstopmode -halt-on-error -file-line-error \
 		-outdir=$(BUILD_DIR) main.tex

@@ -17,6 +17,7 @@ from src.evaluation.latency_robust_model_evaluation import (
     FINAL_TRAIN_END,
     MODEL_VERSION,
     chronological_cross_validation,
+    cross_validated_permutation_importance,
     final_evaluation,
     select_by_cross_validation,
     train_final_model,
@@ -32,6 +33,13 @@ def build_report(data: pd.DataFrame) -> tuple[str, dict[str, object]]:
         .rename(columns={"mae": "mean_mae", "rmse": "mean_rmse"})
     )
     selected = select_by_cross_validation(cv_results)
+    _, feature_importance = cross_validated_permutation_importance(
+        data,
+        selected,
+        n_repeats=30,
+        random_state=42,
+        n_jobs=-1,
+    )
     final_metrics, hourly, weekday = final_evaluation(data, selected)
     metadata: dict[str, object] = {
         "model_version": MODEL_VERSION,
@@ -42,6 +50,9 @@ def build_report(data: pd.DataFrame) -> tuple[str, dict[str, object]]:
         "training_period": "2022-2025 after candidate freeze",
         "final_test_period": "2026-01-01 to 2026-07-01 Europe/Oslo",
         "traffic_source": "Statens vegvesen Traffic Data API",
+        "feature_importance_method": "permutation importance with negative MAE",
+        "feature_importance_repeats_per_fold": 30,
+        "feature_importance_folds": int(feature_importance["folds"].max()),
     }
     report = "\n".join(
         [
@@ -62,6 +73,18 @@ def build_report(data: pd.DataFrame) -> tuple[str, dict[str, object]]:
             _markdown_table(means),
             "",
             f"Kandidaten ble fryst kun på gjennomsnittlig CV-MAE: **{selected.name}**.",
+            "",
+            "## Cross-validated permutation feature importance",
+            "",
+            (
+                "Den valgte feature-pakken ble trent på nytt i hver av de tre kronologiske "
+                "CV-foldene. Hver feature ble permutert 30 ganger på foldens validation-data. "
+                "En positiv verdi er gjennomsnittlig økning i MAE, målt i kjøretøy per time. "
+                "Analysen beskriver modellens avhengighet av inputene og ble ikke brukt til "
+                "å endre den frosne kandidaten."
+            ),
+            "",
+            _markdown_table(feature_importance),
             "",
             "2025 var låst fra forrige sluttevaluering og ble ikke brukt til kandidat-, feature- eller modellvalg. Etter frysing ble modellen trent på 2022–2025.",
             "",
