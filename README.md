@@ -9,6 +9,16 @@ Den predikerer trafikkvolum én time frem i tid fra kalenderfeatures og eksakte
 trafikklag ved `t-24`, `t-48` og `t-168`. Historiske forsøk med Frost-værdata
 er dokumentert nedenfor, men inngår ikke i appen eller sluttmodellen.
 
+## Videodemonstrasjon
+
+En kort demonstrasjon av prognoseappen:
+
+
+
+https://github.com/user-attachments/assets/46ba529c-b5d3-42d7-84ff-ce183e59f655
+
+
+
 ## Kom i gang
 
 Krever Python 3.11 eller nyere.
