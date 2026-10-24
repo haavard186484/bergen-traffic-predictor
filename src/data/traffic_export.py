@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 TIMESTAMP_COLUMN = "Fra"
 VOLUME_COLUMNS = ("Trafikkmengde", "Volum")
 
