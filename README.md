@@ -3,9 +3,11 @@
 En maskinlæringsapplikasjon som predikerer antall kjøretøy ved ett
 trafikkregistreringspunkt i Bergen én time frem i tid.
 
-Prosjektet bruker historiske trafikkdata fra Statens vegvesen og kan hente
-historiske værdata fra MET Norway / Frost. Første versjon arbeider med timedata
-for ett valgt målepunkt.
+Den endelige løsningen er den latensrobuste, værfrie
+`traffic-hgb-latency-robust-v1`-modellen for Danmarks plass (`14630V805616`).
+Den predikerer trafikkvolum én time frem i tid fra kalenderfeatures og eksakte
+trafikklag ved `t-24`, `t-48` og `t-168`. Historiske forsøk med Frost-værdata
+er dokumentert nedenfor, men inngår ikke i appen eller sluttmodellen.
 
 ## Kom i gang
 
@@ -15,15 +17,21 @@ Krever Python 3.11 eller nyere.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
+make build-app-model
 pytest
 streamlit run app/streamlit_app.py
 ```
+
+`make build-app-model` henter og normaliserer trafikkdata for 2022--2026 H1
+og trener den frosne modellen lokalt. Rådata, prosesserte data og
+modellartefakter er ignorert av Git, men kan gjenskapes med kommandoen. Appen
+krever ingen Frost-nøkkel eller Frost-data.
 
 ## Hent eller oppdater trafikkdata
 
 Bruk Traffic Data API, ikke manuell eksport, for flerårig timetrafikk. Med
 virtuelt miljø aktivert henter og klargjør denne kommandoen data for Danmarks
-plass (`14630V805616`) for perioden 2022–2025:
+plass (`14630V805616`) for perioden 2022--2026 H1 som sluttmodellen trenger:
 
 ```bash
 make refresh-traffic
@@ -43,7 +51,14 @@ make refresh-traffic \
   RAW_TRAFFIC=data/raw/traffic_2025.csv
 ```
 
-## EDA og baseline
+## Eksperimenthistorikk
+
+Seksjonene nedenfor dokumenterer EDA, baseline og de kronologiske
+modellforsøkene som ledet fram til sluttmodellen. De beholdes for
+etterprøvbarhet, men bare den latensrobuste modellen i seksjonen
+«Latensrobust modell og Streamlit-app» er produksjonskandidaten.
+
+### EDA og baseline
 
 Lag EDA-rapporten og evaluer den reproduserbare baselinen med lokalt data:
 
@@ -63,7 +78,7 @@ kan aldri føre til at et målegap hoppes over. MAE er hovedmetrikken, med RMSE
 som støttemål. Se den genererte [EDA- og baseline-rapporten](docs/traffic-eda-baseline.md)
 for funn og resultater.
 
-## Første ML-modell
+### Første ML-modell
 
 Kjør det lekkasjesikre, reproduserbare modellforsøket på det lokale
 trafikkdatasettet:
@@ -104,7 +119,7 @@ berører et kjent målegap.
 Se [datafeasibility-guiden](docs/data-feasibility.md) for detaljer om API,
 datakvalitet og målegap.
 
-## Værdata fra MET Norway / Frost
+### Værdata fra MET Norway / Frost
 
 Den reproduserbare Frost-klienten henter timeserier fra standardstasjonen
 Bergen - Florida (`SN50540`) for temperatur, timesnedbør og vindhastighet.
@@ -148,7 +163,7 @@ evaluert på 2025-testen. Dagens valgte modell er fortsatt trafikk-HGB med
 tidligere rapportert full test-MAE 106,22. Se
 [værmodellrapporten](docs/weather-model.md).
 
-## Feilanalyse av valgt modell
+### Feilanalyse av valgt modell
 
 Kjør den reproduserbare, diagnostiske 2024-analysen med lokale trafikk- og
 værdata:
@@ -164,7 +179,7 @@ måned, undersøker datoer med store feil og grupperer dem etter Frost-vær ved
 `t - 1` (regn, vind og temperatur). Væropplysningene er diagnostiske, ikke
 nye modellfeatures, og Frost-mangler holdes eksplisitte uten imputering.
 
-## Kalenderfeatures og videre modellvalg
+### Kalenderfeatures og videre modellvalg
 
 Helligdags- og høytidsindikatorer evalueres uten å bruke 2025:
 
@@ -182,7 +197,7 @@ foretrekke: gjennomsnittlig CV-MAE er 119,69 mot 120,03 uten kalenderfeatures,
 og den etterfølgende 2024-MAE er 99,83. Den lille CV-forskjellen tilsier at
 featurelisten må fryses før en eventuell senere, én-gangs sluttevaluering.
 
-## Frosset kalender- og værmodell
+### Frosset kalender- og værmodell
 
 Når den siste, forhåndsdefinerte værpakken skal vurderes og modellen fryses,
 kjør:
@@ -233,18 +248,10 @@ lagrer en ignorert artefakt i `models/`:
 python -m scripts.run_latency_robust_model
 ```
 
-Datasettet må omfatte 2026 H1; hent samme Statens vegvesen-timeserie og bygg
-det lokale datasettet fra de to råfilene slik:
-
-```bash
-python -m scripts.download_traffic_data \
-  --point-id 14630V805616 \
-  --from 2026-01-01T00:00:00+01:00 \
-  --to 2026-07-01T00:00:00+02:00 \
-  --output data/raw/traffic_2026_h1.csv
-python -m scripts.prepare_traffic_dataset \
-  data/raw/traffic_2022_2025.csv data/raw/traffic_2026_h1.csv --allow-gaps
-```
+Kjør `make build-app-model` fra en tom arbeidskopi for å hente hele perioden,
+bygge det normaliserte datasettet og lage modellartefakten. Dersom dataene
+allerede finnes, er `make train-latency-robust-model` tilstrekkelig for å lage
+artefakten på nytt.
 
 Start deretter appen med `streamlit run app/streamlit_app.py`. Appen henter
 kun de nødvendige historiske lagene fra Traffic Data API, viser mottatte
@@ -254,6 +261,8 @@ den nyligste publiserte timeserien er forsinket.
 
 ## Status
 
-Trafikkdata, EDA, baseline og første lekkasjesikre ML-modell for Danmarks plass
-er etablert. Historisk Frost-nedlasting og konservative vær-lag er klare for
-validering på samme 2024-periode.
+Prosjektet er klart for lokal demonstrasjon: den frosne, latensrobuste
+trafikk-HGB-en for Danmarks plass er trent på 2022--2025, evaluert én gang på
+2026 H1 og tilgjengelig gjennom Streamlit-appen. Værforsøkene er avsluttet
+fordi de ikke forbedret den kronologiske valideringen; Frost brukes derfor
+ikke i sluttmodellen.

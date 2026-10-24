@@ -12,7 +12,6 @@ from urllib.request import Request, urlopen
 
 import pandas as pd
 
-
 API_URL = "https://trafikkdata-api.atlas.vegvesen.no"
 PAGE_SIZE = 100
 POINT_ID_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
@@ -45,7 +44,7 @@ def _query(point_id: str, start: str, end: str, cursor: str | None) -> str:
 
 
 def _post_json(request: Request) -> dict[str, Any]:
-    with urlopen(request, timeout=30) as response:  # noqa: S310 - fixed public API URL
+    with urlopen(request, timeout=30) as response:
         return json.load(response)
 
 
