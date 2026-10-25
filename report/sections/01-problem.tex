@@ -8,49 +8,32 @@ trafikkregistreringspunkt i løpet av neste time. Punktet er Danmarks plass med 
 \emph{target} er observert trafikkvolum ved $t+1$. Oppgaven er dermed
 \emph{supervised regression} og en kortsiktig tidsserieprognose.
 
-Den opprinnelige prosjektideen var ikke å lage en modell bare basert på trafikk.
-Hypotesen var at vær påvirker reisemønsteret, og at historiske værdata fra MET
-Norways Frost API derfor kunne gi bedre prediksjoner. I ML-livsløpet testet vi både
-forsinkede værmålinger og avledede værvariabler. Ingen av variantene gjorde det bedre
-enn den værfrie modellen i kronologisk validering. At sluttmodellen ikke bruker vær,
-er altså et resultat av eksperimentene og modellvalget, ikke en avgrensning vi
-bestemte på forhånd.
+Prosjektets opprinnelige hypotese var at historiske værdata fra MET Norways Frost
+API kunne forbedre prediksjonene. Værvariantene tapte i kronologisk validering, så
+sluttmodellen ble værfri som følge av eksperimentene.
 
-Målgruppen i et videreutviklet system kan være trafikkplanleggere, analytikere og
-andre som trenger et enkelt anslag for belastningen ved punktet. En prognose kan for
-eksempel støtte bemanning, midlertidig trafikkstyring eller vurdering av avvik fra et
-normalt ukemønster. Studentprosjektet dokumenterer imidlertid ingen faktisk
-beslutningsbruk, brukertall eller økonomisk gevinst. Vi vurderer det derfor som et
-avgrenset demonstrasjon: systemet viser en komplett kjede fra åpne data til en
-interaktiv prognose, men gir ikke grunnlag for å hevde produksjonsverdi eller
-lønnsomhet.
+En videreutviklet løsning kan gi trafikkplanleggere og analytikere et anslag for
+belastningen ved punktet. Den manuelle referansen er trafikken på samme klokkeslett
+én uke tidligere, eventuelt justert skjønnsmessig for helg eller ferie. Dette er
+prosjektets baseline. Maskinlæring er relevant fordi trafikken varierer med time,
+ukedag og kalenderhendelser, og fordi flere historiske lag kan samvirke
+ikke-lineært. Modellen mangler likevel informasjon om blant annet ulykker,
+vegarbeid og arrangementer.
 
-En manuell prognose kan lages ved å slå opp trafikken på samme klokkeslett én uke
-tidligere. Dette er både lett å forstå og enkelt å gjøre, og er prosjektets sentrale
-\emph{baseline}. En analytiker kunne i tillegg justert tallet skjønnsmessig for helg,
-helligdag eller ferie. Maskinlæring er relevant fordi trafikkmønsteret varierer med
-time, ukedag og kalenderhendelser, og fordi samspillet mellom flere historiske lag
-kan være ikke-lineært. Modellen gjør beregningen likt for alle timer, men erstatter
-ikke lokal kunnskap om ulykker, vegarbeid eller arrangementer som mangler i
-datasettet.
+Prognosen kan brukes til å oppdage avvik fra et normalt ukemønster eller som ett av
+flere grunnlag for planlegging. Studentprosjektet har imidlertid ikke undersøkt
+faktisk beslutningsbruk, brukertall eller økonomisk gevinst. Løsningen demonstrerer
+derfor teknisk gjennomførbarhet, ikke dokumentert nytte eller lønnsomhet i drift.
 
-Avgrensningen til ett punkt og én times horisont var bevisst. Den gjør det mulig å
-kontrollere hele dataløpet og sammenligne modellene på en entydig oppgave innenfor
-prosjektperioden. Modellen sier ikke noe om reisetid, kølengde, retning eller årsaken
-til et trafikkvolum. Den kan heller ikke overføres direkte til et annet målepunkt,
-fordi døgnprofil, vegtype og lokale hendelser kan være annerledes. En utvidelse må
-derfor behandles som en ny modelloppgave, ikke som en enkel endring i appens
-punkt-ID.
+Avgrensningen til ett punkt og én times horisont gjør dataløpet og evalueringen
+entydig. Modellen sier ikke noe om reisetid, kølengde eller retning og kan ikke
+overføres direkte til andre målepunkter med andre trafikkmønstre.
 
-Figur~\ref{fig:pipeline} viser systemgrensen. Statens vegvesens Traffic Data API
-leverer aggregerte trafikkmålinger; API-et har én time som korteste offentlige
-intervall og publiserer kvalitetsparametere sammen med dataene
-\cite{vegvesen-traffic-api}. Prosjektet validerer og normaliserer serien, bygger
-modellvariabler fra eksakte tidspunkter, trener en frosset modell og bruker den i en
-lokal Streamlit-app. Endringer i datakvalitet eller publiseringsforsinkelse påvirker
-om de nødvendige historiske dataene finnes, og dermed om appen kan lage en prognose.
-Koden som bygger modellvariablene, deles mellom trening og app, slik at definisjonene
-er like i begge ledd.
+Figur~\ref{fig:pipeline} viser systemgrensen. Traffic Data API leverer aggregerte
+timesmålinger med kvalitetsparametere \cite{vegvesen-traffic-api}. Prosjektet
+normaliserer serien, bygger modellvariabler fra eksakte tidspunkter, trener modellen
+og bruker den i Streamlit. Trening og app deler feature-kode, mens datakvalitet og
+publiseringsforsinkelse avgjør om en prognose kan lages.
 
 \begin{figure}[htbp]
   \centering
@@ -58,18 +41,15 @@ er like i begge ledd.
   \caption{Implementert dataløp fra offentlige trafikkdata til lokal demonstrasjon.}
   \label{fig:pipeline}
 \end{figure}
+\FloatBarrier
 
-Prosjektets suksesskriterium er teknisk og avgrenset: en modell uten datalekkasje
-skal slå en relevant forrige-uke-baseline på en senere, urørt periode, og hele
-løsningen skal kunne bygges med dokumenterte kommandoer. Appen skal gi en forståelig
-prognose eller en tydelig feilmelding. Markedsmessige suksessmål er ikke definert
-fordi de ikke er undersøkt.
-
-Ressursbehovet er moderat. Flerårige timedata for ett punkt får plass lokalt, og HGB
-kan trenes på en vanlig bærbar datamaskin. Den viktigste ressursen har vært
-utviklingsarbeid: datavalidering, lekkasjekontroll, kronologisk evaluering og
-integrasjon mellom modell og app. En produksjonsløsning ville i tillegg krevd
-driftsansvar, overvåking og rutiner for modellgodkjenning.
+Prosjektet regnes som vellykket dersom en lekkasjesikker modell slår
+forrige-uke-baselinen på en senere, urørt periode, kan bygges reproduserbart og gir
+enten prognose eller tydelig feilmelding. Flerårige timedata og HGB-modellen kan
+håndteres på en vanlig bærbar datamaskin. Den viktigste ressursen er
+utviklingsarbeid til datavalidering, lekkasjekontroll, evaluering og integrasjon.
+En produksjonsløsning ville i tillegg krevd driftsansvar, overvåking og rutiner for
+godkjenning av nye modellversjoner.
 
 \subsection{Metrikker}
 
@@ -79,18 +59,15 @@ Hovedmetrikken er gjennomsnittlig absolutt feil, MAE,
   \operatorname{MAE}=\frac{1}{n}\sum_{i=1}^{n}|y_i-\hat{y}_i|.
 \end{equation}
 
-MAE måles i kjøretøy per time og kan derfor tolkes direkte. Lavere verdi er bedre,
-og null er perfekt samsvar. RMSE rapporteres som støttemål fordi
-kvadreringen gir større utslag for enkelte store feil:
+MAE måles i kjøretøy per time og kan tolkes direkte. RMSE rapporteres som støttemål
+fordi kvadreringen gir større utslag for enkelte store feil:
 
 \begin{equation}
   \operatorname{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}.
 \end{equation}
 
-Alle modell- og baselinemål beregnes på de samme prognoseradene. Dette er viktig
-fordi manglende lag ellers kunne gitt én metode et enklere utvalg. Vi rapporterer
-også antall evaluerte prediksjoner, feil etter timen som predikeres, og feil etter
-ukedag.
-For programvaren kontrolleres reproduserbar bygging, gyldig modellartefakt,
-tilgjengelige lag, API-feil og tidssonehåndtering. Prosjektet har ikke målt svartid,
-oppetid eller brukertilfredshet; slike mål hører til en eventuell senere driftstest.
+Modell og baseline måles på de samme prognoseradene. Vi rapporterer også antall
+prediksjoner og feil etter time og ukedag. Felles rader hindrer at en metode får et
+enklere evalueringsutvalg fordi den mangler færre lag. Programvaren testes for
+reproduserbar bygging, modellasting, manglende lag, API-feil og tidssoner. Svartid,
+oppetid og brukertilfredshet er ikke målt i den lokale demonstrasjonen.

@@ -26,6 +26,7 @@
 \usepackage{fancyhdr}
 \usepackage{enumitem}
 \usepackage{caption}
+\usepackage{placeins}
 \usepackage{titlesec}
 
 \definecolor{reportblue}{HTML}{17365D}
@@ -73,20 +74,14 @@
 \vspace{1.5em}
 
 {\small
-\textbf{Kort sammendrag.} Prosjektets opprinnelige spørsmål var om historiske
-værdata fra Frost kunne gi bedre prediksjoner av biltrafikk én time frem ved
-Danmarks plass. Kronologiske eksperimenter med både forsinkede værmålinger og en
-pakke med avledede værvariabler ga ingen forbedring; modellene som bare brukte
-trafikkdata, presterte bedre. Sluttproduktet er derfor en lokal
-Streamlit-demonstrasjon med en frosset modell uten værdata, basert på kalender og
-historisk trafikk. Modellen oppnådde MAE 108,81 kjøretøy/time på den tidligere
-ubrukte perioden 2026 H1, mot 211,79 for forrige-uke-baselinen på de samme 4 343
-tidspunktene. At vær ikke hjalp, er et sentralt resultat. Løsningen er en avgrenset
-demonstrasjon for ett målepunkt, ikke en offentlig driftet tjeneste.
+\textbf{Kort sammendrag.} Bergen Traffic Predictor predikerer biltrafikk én time
+frem ved Danmarks plass. Kronologiske eksperimenter viste at værdata fra Frost
+ikke forbedret resultatene, og sluttmodellen bruker derfor kalender og historisk
+trafikk. På den tidligere ubrukte perioden 2026 H1 fikk modellen MAE 108,81
+kjøretøy/time, mot 211,79 for forrige-uke-baselinen på de samme 4 343
+tidspunktene. Sluttproduktet er en lokal Streamlit-demonstrasjon for ett
+målepunkt.
 \par}
-
-\tableofcontents
-\clearpage
 
 \input{sections/01-problem}
 \input{sections/02-data}

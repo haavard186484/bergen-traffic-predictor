@@ -6,12 +6,20 @@ Trafikkdata hentes fra Statens vegvesens åpne Traffic Data API, som inneholder
 aggregerte registreringer fra offentlige veger \cite{vegvesen-traffic-portal}. Uttrekket
 dekker 1. januar 2022 til 1. juli 2026 i lokal tid og gjelder feltet
 \enquote{Totalt} ved punkt \texttt{14630V805616}. Den normaliserte timeaksen har
-39 407 timer. Av disse har 38 956 observert trafikkvolum og 451 mangler verdi. Perioden
-2022--2025 har 35 064 timer, 34 613 observasjoner og alle de 451 manglene. Den
-reserverte perioden 2026 H1 har 4 343 observerte timer og ingen mangler.
+39 407 timer, hvorav 38 956 har observert trafikkvolum og 451 mangler verdi.
+Perioden 2022--2025 brukes til utvikling og trening, mens 4 343 observerte timer i
+2026 H1 reserveres til sluttevaluering.
 
-Figur~\ref{fig:danmarks-plass-kart} gir geografisk kontekst for
-registreringsområdet.
+Targetverdien lages uten manuell merking: For en modellrad ved $t$ slås
+\texttt{traffic\_volume} ved nøyaktig $t+1$ opp som
+\texttt{target\_traffic}. Trafikkmåleren er dermed både datakilde og fasit, men
+sensorfeil og ufullstendig dekning kan påvirke begge. Pipelinen krever gyldig
+tidspunkt og et ikke-negativt volum. Rådata og modellartefakter er utelatt fra Git,
+men kan gjenskapes med \texttt{make build-app-model}.
+
+Kvalitetsrapporten finner ingen dupliserte tidspunkter og markerer rader uten volum
+som ugyldige. API-ets kvalitetsinformasjon lagres sammen med rådataene. Dette gir en
+reproduserbar kontroll av labelgrunnlaget, men kan ikke utelukke alle sensorfeil.
 
 \begin{figure}[tbp]
   \centering
@@ -21,91 +29,56 @@ registreringsområdet.
   og valgte målested.}
   \label{fig:danmarks-plass-kart}
 \end{figure}
-
-Det opprinnelige API-uttrekket inneholder 39 025 rader. Kvalitetsrapporten markerer
-69 av dem som ugyldige fordi volum mangler, men finner ingen dupliserte tidspunkter.
-Når datasettet reindekseres til alle forventede UTC-timer, blir både disse radene og
-timer uten API-rad stående som ukjente verdier. Forskjellen mellom rått radantall og
-39 407 timer på den komplette aksen er derfor forventet og dokumentert, ikke et tap
-som oppstår under behandling.
-
-API-resultatet lagres først som rå CSV sammen med kilde, hentetidspunkt, punkt-ID,
-periode og radantall. Det prosesserte datasettet får en egen tilleggsfil med SHA-256
-for råfilen, kvalitetsrapport og kolonneliste. Rådata, prosesserte data og
-modellartefakter er utelatt fra Git, men kan gjenskapes med \texttt{make
-build-app-model}. Denne kommandoen henter hele perioden, bygger datasettet og trener
-sluttmodellen.
-
-Targetverdien lages uten manuell merking: For en modellrad ved $t$ slås
-\texttt{traffic\_volume} ved nøyaktig $t+1$ opp som
-\texttt{target\_traffic}. Trafikkmåleren er dermed både datakilde og fasit. Dette gir
-samme enhet i modellvariabler og fasit, men ikke nødvendigvis en feilfri sannhet. Sensorfeil og
-ufullstendig dekning kan fortsatt påvirke både modellvariabler og targetverdier.
-API-ets kvalitetsinformasjon lagres i rådataene, mens denne prosjektversjonen først
-og fremst krever at tidspunktet er gyldig og volumet finnes og ikke er negativt.
+\FloatBarrier
 
 \subsection{Rensing og målegap}
 
-Innlest tid konverteres til tidssonebevart UTC, sorteres og kontrolleres for ugyldige
-og dupliserte tidspunkter. Kalenderinformasjon beregnes etter konvertering til
-\texttt{Europe/Oslo}. Denne arbeidsdelingen bevarer entydige tidspunkt gjennom
-sommertid og vintertid samtidig som time og dato får riktig lokal betydning.
+Tid konverteres til tidssonebevart UTC og kontrolleres for ugyldige og dupliserte
+tidspunkter. Kalenderinformasjon beregnes i \texttt{Europe/Oslo}, slik at tidsaksen
+er entydig gjennom sommertid og vintertid, men kalenderverdiene er lokale.
 
-Det finnes to dokumenterte målegap: 67 timer fra 4. juni 2022 kl. 21 til 7. juni
-kl. 15, og 384 timer fra 2. oktober 2024 kl. 10 til 18. oktober kl. 09, alle tider i
-\texttt{Europe/Oslo}. Pipelinen oppretter en komplett timeakse og lar disse 451
-verdiene stå som manglende. De blir ikke satt til null, interpolert eller erstattet.
-Null ville betydd observert fravær av trafikk, mens en manglende verdi betyr at
-volumet er ukjent. Minimum og maksimum blant observerte timer i hele datasettet er
-henholdsvis 40 og 4 235 kjøretøy; ingen observerte timer er null.
+De 451 manglende timene ligger i to dokumenterte gap i 2022 og 2024. Pipelinen
+oppretter en komplett timeakse og lar verdiene stå som manglende; de settes ikke til
+null, interpoleres eller erstattes. Null er en observasjon, mens en manglende verdi
+betyr at volumet er ukjent.
 
-Den innledende datautforskingen viste et tydelig døgn- og ukemønster. For 2022--2025 var
+Det første gapet varer 67 timer fra 4. til 7. juni 2022, og det andre varer 384
+timer fra 2. til 18. oktober 2024. Blant observerte timer i hele datasettet er
+minimum 40 og maksimum 4 235 kjøretøy; ingen observerte timer har volum null.
+
+Datautforskingen viste et tydelig døgn- og ukemønster. For 2022--2025 var
 gjennomsnittet høyest kl. 15 med 3 426 kjøretøy per time og lavest kl. 03 med 185.
 Helgesnittet var 1 275, som var 32,5 prosent lavere enn hverdagssnittet på 1 889.
-Disse mønstrene begrunner kalendervariablene og den ukentlige baselinen, men de brukes
-ikke som en alternativ fasit. Volumfordelingen alene sier heller ikke om en høy verdi
-er normal for en bestemt dato.
+Dette begrunner kalenderfeatures og ukebaselinen, men brukes ikke som en alternativ
+fasit.
 
-Alle lag og targetverdier hentes ved eksakte tidspunkter, aldri ved å flytte et fast
-antall rader. Hvis modellen trenger $t-24$ og denne timen ligger i et målegap, blir
-verdien manglende selv om forrige tilgjengelige rad finnes 25 timer tilbake.
-Modellrader med manglende trafikklag eller targetverdi fjernes før trening og
-evaluering. Dette er et dokumentert utvalg, ikke imputering, og hindrer at
-observasjoner flyttes over hull i serien.
+Lag og target hentes ved eksakte tidspunkter, ikke ved å flytte et antall rader.
+Modellrader med manglende trafikklag eller target fjernes før trening og evaluering.
+Dermed kan ingen observasjon flyttes over et hull i serien.
 
 \subsection{\emph{Feature engineering}}
 
-Sluttmodellen bruker 14 \emph{features}. Seks beskriver lokal kalender: time, ukedag,
-måned, helg samt sinus og cosinus av time. Fem deterministiske indikatorer markerer
-offentlig helligdag, dag før og etter helligdag, jul- og nyttårsperioden og 17. mai.
-De tre numeriske trafikklagene er observert volum ved nøyaktig $t-24$, $t-48$ og
-$t-168$. Alle er kjent, eller kan konstateres som manglende, når prognosen lages.
-Den trebaserte sluttmodellen krever ingen skalering.
+Sluttmodellen bruker 14 \emph{features}. Seks beskriver lokal kalender: time,
+ukedag, måned, helg samt sinus og cosinus av time. Fem indikatorer markerer
+offentlig helligdag, dag før og etter helligdag, jul og nyttår samt 17. mai. De tre
+trafikklagene er observert volum ved nøyaktig
+$t-24$, $t-48$ og $t-168$. Alle er tilgjengelige, eller kan konstateres som
+manglende, når prognosen lages. Den trebaserte modellen krever ingen skalering.
+Trafikklagene følger absolutte tidsforskjeller i UTC, mens kalenderfeatures beregnes
+i lokal tid. Sinus og cosinus gjør at time 23 og 00 ligger nær hverandre i
+modellens representasjon.
 
-Sinus og cosinus gjør at kl. 23 og kl. 00 ligger nær hverandre i modellens
-representasjon. Helligdagsindikatorene beregnes fra kalenderen og krever
-ingen observerte fremtidsdata. Trafikklagene følger derimot absolutte tidsforskjeller
-i UTC. Dermed endres ikke den faktiske avstanden ved overgang mellom sommer- og
-vintertid, selv om det lokale klokkeslettet kan være annerledes.
-
-Værdataene ble hentet fordi prosjektets opprinnelige hypotese var at værvariabler
-kunne gi bedre prediksjoner enn historisk trafikk alene. De historiske
-observasjonene kom fra MET Norways Frost API for Bergen--Florida (SN50540). Frost
-gir tilgang til arkiverte observasjoner og krever kilde,
-referansetid og element i forespørselen \cite{frost-howto}. Temperatur og nedbør
-dekket 35 016 av 35 064 timer i 2022--2025, mens vind dekket 34 458. Prosjektet
-brukte konservative, forsinkede værvariabler fordi \texttt{referenceTime} beskriver
-observasjonstid, ikke publiseringstid \cite{frost-time-concepts}. Både disse
-variablene og en senere pakke med avledede værvariabler ga dårligere valideringsmål
-enn modellen som bare brukte trafikk. Forsøket på å forbedre modellen med vær lyktes
-dermed ikke, og Frost inngår derfor ikke i sluttmodellen eller appen.
+Historiske temperatur-, nedbør- og vindmålinger ble hentet fra Frost for
+Bergen--Florida (SN50540) \cite{frost-howto}. Bare forsinkede målinger ble brukt,
+fordi \texttt{referenceTime} er observasjonstid og ikke publiseringstid
+\cite{frost-time-concepts}. Værvariantene ga dårligere valideringsmål og inngår ikke
+i sluttmodellen eller appen. Manglende værmålinger ble bevart som manglende og ikke
+imputert.
 
 \subsection{Personvern og etikk}
 
-Datasettet inneholder aggregerte passeringstall per time, ikke kjøretøy- eller
-personidentifikatorer. Personvernrisikoen er derfor lav. Den viktigste etiske
-risikoen er feilaktig bruk: ett registreringspunkt representerer ikke all trafikk på
-Danmarks plass eller Bergen, og en prognose kan være misvisende ved hendelser som
-modellen ikke kjenner. Appen oppgir derfor punkt-ID, datakilde og begrensning. En
-senere operativ løsning bør i tillegg dokumentere datalisens, tilgjengelighet,
-sensorendringer og hvem som har ansvar for beslutninger som støttes av prognosen.
+Datasettet inneholder aggregerte passeringstall, ikke kjøretøy- eller
+personidentifikatorer, så personvernrisikoen er lav. Ett punkt representerer likevel
+ikke all trafikk i området, og ukjente hendelser kan gjøre prognosen misvisende.
+Appen oppgir derfor punkt-ID, datakilde og begrensning. Ved eventuell operativ bruk
+må ansvar for beslutninger, datalisens og sensorendringer dokumenteres.
