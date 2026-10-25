@@ -52,8 +52,9 @@ Helgesnittet var 1 275, som var 32,5 prosent lavere enn hverdagssnittet på 1 88
 Dette begrunner kalenderfeatures og ukebaselinen, men brukes ikke som en alternativ
 fasit.
 
-Lag og target hentes ved eksakte tidspunkter, ikke ved å flytte et antall rader.
-Modellrader med manglende trafikklag eller target fjernes før trening og evaluering.
+Historiske trafikkverdier og target hentes ved eksakte tidspunkter, ikke ved å
+flytte et antall rader. Modellrader med manglende historiske trafikkverdier eller
+target fjernes før trening og evaluering.
 Dermed kan ingen observasjon flyttes over et hull i serien.
 
 \subsection{\emph{Feature engineering}}
@@ -61,11 +62,11 @@ Dermed kan ingen observasjon flyttes over et hull i serien.
 Sluttmodellen bruker 14 \emph{features}. Seks beskriver lokal kalender: time,
 ukedag, måned, helg samt sinus og cosinus av time. Fem indikatorer markerer
 offentlig helligdag, dag før og etter helligdag, jul og nyttår samt 17. mai. De tre
-trafikklagene er observert volum ved nøyaktig
+historiske trafikkvariablene er observert volum ved nøyaktig
 $t-24$, $t-48$ og $t-168$. Alle er tilgjengelige, eller kan konstateres som
 manglende, når prognosen lages. Den trebaserte modellen krever ingen skalering.
-Trafikklagene følger absolutte tidsforskjeller i UTC, mens kalenderfeatures beregnes
-i lokal tid. Sinus og cosinus gjør at time 23 og 00 ligger nær hverandre i
+De historiske trafikkverdiene hentes med eksakte tidsforskjeller i UTC, mens
+kalenderfeatures beregnes i lokal tid. Sinus og cosinus gjør at time 23 og 00 ligger nær hverandre i
 modellens representasjon.
 
 Historiske temperatur-, nedbør- og vindmålinger ble hentet fra Frost for

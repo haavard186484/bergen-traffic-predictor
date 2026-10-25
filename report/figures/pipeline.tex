@@ -6,7 +6,7 @@
 ]
 \node[stage] (api) {Traffic Data API\\timevolum};
 \node[stage, right=of api] (prepare) {Validering og\\komplett timeakse};
-\node[stage, right=of prepare] (features) {Kalender og eksakte\\lag på tidspunkt};
+\node[stage, right=of prepare] (features) {Kalender og historiske\\trafikkverdier};
 \node[stage, right=of features] (model) {Frosset HGB\\og metadata};
 \node[stage, right=of model] (app) {Lokal\\Streamlit-app};
 \draw[arrow] (api) -- (prepare);

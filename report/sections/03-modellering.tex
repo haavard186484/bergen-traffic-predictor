@@ -4,7 +4,7 @@
 
 Forrige-uke-baselinen bruker observasjonen ved $(t+1)-168=t-167$, samme target-time
 én uke tidligere. En lineær regresjon og en \texttt{HistGradientBoostingRegressor}
-(HGB) ble først trent med kalender og trafikklag ved $t-1$, $t-2$, $t-24$ og
+(HGB) ble først trent med kalender og trafikkverdier fra $t-1$, $t-2$, $t-24$ og
 $t-168$. På 2024-valideringen fikk lineær regresjon MAE 322,45, HGB 103,28 og
 baselinen 200,78. HGB ble valgt og fikk MAE 106,22 ved én måling på 2025.
 Sammenligningene brukte 8 231 felles rader i 2024 og 8 760 i 2025. Etter
@@ -18,9 +18,9 @@ mot 103,41 uten vær på de samme 2024-radene, og en avledet værpakke fikk CV-M
 De forsinkede værvariablene ble valgt for å unngå at modellen fikk observasjoner som
 ikke ville vært publisert på prognosetidspunktet.
 
-Den første frosne kalender-HGB-en fikk MAE 102,35 på 2025, men krevde de ferske
-lagene $t-1$ og $t-2$, som ikke alltid er publisert når prognosen lages. Tre
-forhåndsdefinerte, latensrobuste lagpakker ble derfor sammenlignet i
+Den første frosne kalender-HGB-en fikk MAE 102,35 på 2025, men krevde de nyeste
+trafikkverdiene ved $t-1$ og $t-2$, som ikke alltid er publisert når prognosen
+lages. Tre forhåndsdefinerte kombinasjoner av eldre trafikkverdier ble derfor sammenlignet i
 2022--2023-CV. Pakkene $(24,168)$, $(24,48,168)$ og $(24,168,336)$ fikk MAE 134,88,
 133,77 og 135,80. Vinneren $(24,48,168)$ ble fryst som
 \texttt{traffic-hgb-latency-robust-v1}. Den ofrer helt fersk trafikkinformasjon for
@@ -100,11 +100,11 @@ ble ikke brukt til modellvalg.
 \end{figure}
 
 Modellen støtter seg særlig på ukerytme, døgnsyklus og trafikken ett døgn tidligere.
-Lagget på 168 timer ga størst gjennomsnittlig MAE-økning med 394,64, etterfulgt av
-time-cosinus med 366,88 og lagget på 24 timer med 223,15. Importance viser
-modellavhengighet, ikke årsak. Korrelasjon mellom tidsvariabler og trafikklag kan
-dessuten fordele betydningen mellom dem. Konklusjonen om vær kommer fra de separate
-væreforsøkene.
+Trafikkverdien fra 168 timer tidligere ga størst gjennomsnittlig MAE-økning med
+394,64, etterfulgt av time-cosinus med 366,88 og trafikkverdien fra 24 timer
+tidligere med 223,15. Importance viser modellavhengighet, ikke årsak. Korrelasjon
+mellom tidsvariablene og de historiske trafikkverdiene kan dessuten fordele
+betydningen mellom dem. Konklusjonen om vær kommer fra de separate væreforsøkene.
 
 \subsection{Feilanalyse}
 

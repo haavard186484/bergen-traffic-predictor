@@ -16,8 +16,8 @@ En videreutviklet løsning kan gi trafikkplanleggere og analytikere et anslag fo
 belastningen ved punktet. Den manuelle referansen er trafikken på samme klokkeslett
 én uke tidligere, eventuelt justert skjønnsmessig for helg eller ferie. Dette er
 prosjektets baseline. Maskinlæring er relevant fordi trafikken varierer med time,
-ukedag og kalenderhendelser, og fordi flere historiske lag kan samvirke
-ikke-lineært. Modellen mangler likevel informasjon om blant annet ulykker,
+ukedag og kalenderhendelser, og fordi trafikkverdier fra flere tidligere
+tidspunkter kan samvirke ikke-lineært. Modellen mangler likevel informasjon om blant annet ulykker,
 vegarbeid og arrangementer.
 
 Prognosen kan brukes til å oppdage avvik fra et normalt ukemønster eller som ett av
@@ -67,7 +67,8 @@ fordi kvadreringen gir større utslag for enkelte store feil:
 \end{equation}
 
 Modell og baseline måles på de samme prognoseradene. Vi rapporterer også antall
-prediksjoner og feil etter time og ukedag. Felles rader hindrer at en metode får et
-enklere evalueringsutvalg fordi den mangler færre lag. Programvaren testes for
-reproduserbar bygging, modellasting, manglende lag, API-feil og tidssoner. Svartid,
+prediksjoner og feil etter time og ukedag. Felles rader hindrer at ulik
+tilgjengelighet av historiske trafikkverdier gir forskjellige evalueringsutvalg.
+Programvaren testes for reproduserbar bygging, modellasting, manglende historiske
+trafikkverdier, API-feil og tidssoner. Svartid,
 oppetid og brukertilfredshet er ikke målt i den lokale demonstrasjonen.

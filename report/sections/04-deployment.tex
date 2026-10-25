@@ -9,7 +9,8 @@ ignorert av Git og må bygges fra dokumenterte kommandoer. Appen gir byggekomman
 dersom modellen mangler eller ikke kan leses.
 
 Modellpakken inneholder den trente HGB-en, den ordnede featurelisten og metadata om
-modellversjon, lagpakke, treningsperiode og datakilde. Treningsskriptet gjenskaper
+modellversjon, tidspunktene for historiske trafikkverdier, treningsperiode og
+datakilde. Treningsskriptet gjenskaper
 CV-rapporten og sluttevalueringen før modellen trenes på 34 159 gyldige rader før
 1. januar 2026.
 
@@ -25,7 +26,8 @@ overgang mellom sommer- og vintertid.
 Ved hvert klikk lastes modellen, og nødvendig historikk hentes fra Traffic Data API.
 Appen bygger kalenderfeatures og slår opp trafikk ved $t-24$, $t-48$ og $t-168$.
 Hvis alle verdiene finnes, vises forventet biltrafikk og de siste 72 timene i en
-graf. Målegap vises som hull. Mangler et nødvendig lag, gis ingen prediksjon.
+graf. Målegap vises som hull. Mangler en nødvendig historisk trafikkverdi, gis
+ingen prediksjon.
 
 Grensesnittets sammenligning bruker observert trafikk ved target minus 168 timer,
 altså $t-167$, mens modellens ukesfeature er knyttet til $t-168$. Sammenligningen er
@@ -47,8 +49,8 @@ Hvert klikk gjør et nytt API-kall; denne versjonen bruker ikke mellomlager elle
 lokal database. Det gjør demonstrasjonen enkel, men gir avhengighet av API-ets
 tilgjengelighet og responstid.
 
-Før reell drift bør systemet logge API-feil, manglende lag, dataalder, modellversjon
-og prediksjoner. Når fasiten blir tilgjengelig, bør MAE og RMSE følges over tid for
+Før reell drift bør systemet logge API-feil, manglende historiske trafikkverdier,
+dataalder, modellversjon og prediksjoner. Når fasiten blir tilgjengelig, bør MAE og RMSE følges over tid for
 å skille datafeil fra modelldrift. Vedvarende avvik kan skyldes sensorendring,
 vegomlegging eller endret reisemønster. En ny modellversjon må velges med
 kronologisk validering og evalueres på en ny, urørt periode før den tas i bruk.
