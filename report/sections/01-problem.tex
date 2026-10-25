@@ -4,35 +4,35 @@
 
 Bergen Traffic Predictor estimerer hvor mange kjøretøy som passerer ett bestemt
 trafikkregistreringspunkt i løpet av neste time. Punktet er Danmarks plass med ID
-\texttt{14630V805616}. Hver modellrad representerer et tidspunkt $t$, mens target er
-observert trafikkvolum ved $t+1$. Oppgaven er dermed supervised regression og
-kortsiktig time-series forecasting.
+\texttt{14630V805616}. Hver modellrad representerer et tidspunkt $t$, mens
+\emph{target} er observert trafikkvolum ved $t+1$. Oppgaven er dermed
+\emph{supervised regression} og en kortsiktig tidsserieprognose.
 
-Den opprinnelige prosjektideen var ikke en ren traffic-only model. Hypotesen var at
-vær påvirker reisemønsteret, og at historiske weather features fra MET Norways Frost
-API derfor kunne forbedre prediction sammenlignet med trafikkhistorikk alene.
-Prosjektets ML lifecycle undersøkte denne hypotesen med både direkte weather lag
-features og avledede weather features. Ingen av variantene ga bedre kronologisk
-validation enn modellen uten vær. Den endelige modellen uten weather features er
-derfor et resultat av eksperimentene og modellvalget, ikke en avgrensning som ble
-bestemt på forhånd.
+Den opprinnelige prosjektideen var ikke å lage en modell bare basert på trafikk.
+Hypotesen var at vær påvirker reisemønsteret, og at historiske værdata fra MET
+Norways Frost API derfor kunne gi bedre prediksjoner. I ML-livsløpet testet vi både
+forsinkede værmålinger og avledede værvariabler. Ingen av variantene gjorde det bedre
+enn den værfrie modellen i kronologisk validering. At sluttmodellen ikke bruker vær,
+er altså et resultat av eksperimentene og modellvalget, ikke en avgrensning vi
+bestemte på forhånd.
 
 Målgruppen i et videreutviklet system kan være trafikkplanleggere, analytikere og
 andre som trenger et enkelt anslag for belastningen ved punktet. En prognose kan for
 eksempel støtte bemanning, midlertidig trafikkstyring eller vurdering av avvik fra et
 normalt ukemønster. Studentprosjektet dokumenterer imidlertid ingen faktisk
 beslutningsbruk, brukertall eller økonomisk gevinst. Vi vurderer det derfor som et
-proof of concept: systemet viser en komplett kjede fra åpne data til en interaktiv
-prognose, men gir ikke grunnlag for å hevde produksjonsverdi eller lønnsomhet.
+avgrenset demonstrasjon: systemet viser en komplett kjede fra åpne data til en
+interaktiv prognose, men gir ikke grunnlag for å hevde produksjonsverdi eller
+lønnsomhet.
 
 En manuell prognose kan lages ved å slå opp trafikken på samme klokkeslett én uke
-tidligere. Dette er både forståelig og operasjonelt enkelt, og er prosjektets sentrale
-baseline. En analytiker kunne i tillegg justert tallet skjønnsmessig for helg,
-helligdag eller ferie. Machine learning er relevant fordi trafikkmønsteret varierer
-systematisk med time, ukedag og kalenderhendelser, og fordi sammenhengen mellom flere
-lag features kan være non-linear. Modellen kan gjøre den samme beregningen
-konsekvent for alle timer, men den erstatter ikke lokal kunnskap om ulykker,
-vegarbeid eller arrangementer som ikke finnes i datasettet.
+tidligere. Dette er både lett å forstå og enkelt å gjøre, og er prosjektets sentrale
+\emph{baseline}. En analytiker kunne i tillegg justert tallet skjønnsmessig for helg,
+helligdag eller ferie. Maskinlæring er relevant fordi trafikkmønsteret varierer med
+time, ukedag og kalenderhendelser, og fordi samspillet mellom flere historiske lag
+kan være ikke-lineært. Modellen gjør beregningen likt for alle timer, men erstatter
+ikke lokal kunnskap om ulykker, vegarbeid eller arrangementer som mangler i
+datasettet.
 
 Avgrensningen til ett punkt og én times horisont var bevisst. Den gjør det mulig å
 kontrollere hele dataløpet og sammenligne modellene på en entydig oppgave innenfor
@@ -46,23 +46,24 @@ Figur~\ref{fig:pipeline} viser systemgrensen. Statens vegvesens Traffic Data API
 leverer aggregerte trafikkmålinger; API-et har én time som korteste offentlige
 intervall og publiserer kvalitetsparametere sammen med dataene
 \cite{vegvesen-traffic-api}. Prosjektet validerer og normaliserer serien, bygger
-features på eksakte tidspunkter, trener en frozen model og bruker den i en lokal
-Streamlit-app. Endringer i datakvalitet eller publiseringsforsinkelse påvirker både
-feature availability og om appen kan lage en prognose. Featurekode deles derfor
-mellom trening og app, slik at samme definisjon brukes i begge ledd.
+modellvariabler fra eksakte tidspunkter, trener en frosset modell og bruker den i en
+lokal Streamlit-app. Endringer i datakvalitet eller publiseringsforsinkelse påvirker
+om de nødvendige historiske dataene finnes, og dermed om appen kan lage en prognose.
+Koden som bygger modellvariablene, deles mellom trening og app, slik at definisjonene
+er like i begge ledd.
 
 \begin{figure}[htbp]
   \centering
   \resizebox{\textwidth}{!}{\input{figures/pipeline}}
-  \caption{Implementert pipeline fra offentlig trafikkdata til lokal demonstrasjon.}
+  \caption{Implementert dataløp fra offentlige trafikkdata til lokal demonstrasjon.}
   \label{fig:pipeline}
 \end{figure}
 
-Prosjektets suksesskriterium er teknisk og avgrenset: en leakage-free model skal
-slå en relevant forrige-uke-baseline på en senere, urørt periode, og hele løsningen
-skal kunne bygges fra dokumenterte kommandoer. Appen skal gi en forståelig prognose
-eller en tydelig feilmelding. Markedsmessige suksessmål er ikke definert fordi de
-ikke er undersøkt.
+Prosjektets suksesskriterium er teknisk og avgrenset: en modell uten datalekkasje
+skal slå en relevant forrige-uke-baseline på en senere, urørt periode, og hele
+løsningen skal kunne bygges med dokumenterte kommandoer. Appen skal gi en forståelig
+prognose eller en tydelig feilmelding. Markedsmessige suksessmål er ikke definert
+fordi de ikke er undersøkt.
 
 Ressursbehovet er moderat. Flerårige timedata for ett punkt får plass lokalt, og HGB
 kan trenes på en vanlig bærbar datamaskin. Den viktigste ressursen har vært
@@ -86,9 +87,10 @@ kvadreringen gir større utslag for enkelte store feil:
   \operatorname{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}.
 \end{equation}
 
-Alle modell- og baselinemål beregnes på identiske forecast-rader. Dette er viktig
+Alle modell- og baselinemål beregnes på de samme prognoseradene. Dette er viktig
 fordi manglende lag ellers kunne gitt én metode et enklere utvalg. Vi rapporterer
-også antall evaluerte prediksjoner, feil etter forecast-time og feil etter ukedag.
+også antall evaluerte prediksjoner, feil etter timen som predikeres, og feil etter
+ukedag.
 For programvaren kontrolleres reproduserbar bygging, gyldig modellartefakt,
 tilgjengelige lag, API-feil og tidssonehåndtering. Prosjektet har ikke målt svartid,
 oppetid eller brukertilfredshet; slike mål hører til en eventuell senere driftstest.

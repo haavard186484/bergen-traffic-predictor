@@ -73,15 +73,16 @@
 \vspace{1.5em}
 
 {\small
-\textbf{Kort sammendrag.} Prosjektets opprinnelige spørsmål var om historiske weather
-features fra Frost kunne forbedre prediction av biltrafikk én time frem ved Danmarks
-plass. Kronologiske eksperimenter med både direkte lag features og en avledet weather
-feature-pakke ga ingen forbedring; traffic-only models presterte bedre. Sluttproduktet
-er derfor en lokal Streamlit-demonstrasjon med en frozen model uten weather features,
-basert på kalender og historisk trafikk. Modellen oppnådde MAE 108,81 kjøretøy/time på den tidligere
+\textbf{Kort sammendrag.} Prosjektets opprinnelige spørsmål var om historiske
+værdata fra Frost kunne gi bedre prediksjoner av biltrafikk én time frem ved
+Danmarks plass. Kronologiske eksperimenter med både forsinkede værmålinger og en
+pakke med avledede værvariabler ga ingen forbedring; modellene som bare brukte
+trafikkdata, presterte bedre. Sluttproduktet er derfor en lokal
+Streamlit-demonstrasjon med en frosset modell uten værdata, basert på kalender og
+historisk trafikk. Modellen oppnådde MAE 108,81 kjøretøy/time på den tidligere
 ubrukte perioden 2026 H1, mot 211,79 for forrige-uke-baselinen på de samme 4 343
-tidspunktene. Den negative værkonklusjonen er et sentralt resultat. Løsningen er et
-proof of concept for ett målepunkt, ikke en offentlig driftet tjeneste.
+tidspunktene. At vær ikke hjalp, er et sentralt resultat. Løsningen er en avgrenset
+demonstrasjon for ett målepunkt, ikke en offentlig driftet tjeneste.
 \par}
 
 \tableofcontents

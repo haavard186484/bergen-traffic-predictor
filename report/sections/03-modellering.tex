@@ -1,60 +1,61 @@
 \section{Modellering}
 
-\subsection{Fra værhypotese til frozen candidate}
+\subsection{Fra værhypotese til frosset kandidat}
 
-Utviklingen fulgte en kronologisk ML lifecycle med værhypotesen som utgangspunkt.
-Målet var å undersøke om weather features kunne gi lavere feil enn modeller basert
-på historisk trafikk. Først ble forrige-uke-prediksjonen etablert som kontroll. For
-en forecast med target $t+1$ bruker baselinen observasjonen ved
-$(t+1)-168=t-167$, altså samme target-time én uke tidligere. En lineær regresjon og
-en \texttt{HistGradientBoostingRegressor} (HGB) ble deretter trent med kalender og
-traffic lag features ved $t-1$, $t-2$, $t-24$ og $t-168$. HGB er en
-histogram-based gradient boosting model for tabulære data. På validation i 2024
-fikk lineær regresjon MAE 322,45, HGB 103,28 og baselinen 200,78. HGB ble derfor
-valgt og oppnådde MAE 106,22 på 2025-testen.
+Utviklingen fulgte et kronologisk ML-livsløp med værhypotesen som utgangspunkt.
+Målet var å undersøke om værvariabler kunne gi lavere feil enn modeller basert på
+historisk trafikk. Først ble forrige-uke-prediksjonen etablert som kontroll. For en
+prognose med \emph{target} $t+1$ bruker baselinen observasjonen ved
+$(t+1)-168=t-167$, altså samme time én uke tidligere. En lineær regresjon og en
+\texttt{HistGradientBoostingRegressor} (HGB) ble deretter trent med kalender og
+trafikklag ved $t-1$, $t-2$, $t-24$ og $t-168$. HGB er en
+\emph{histogram-based gradient boosting}-modell for tabelldata. På
+valideringsdataene fra 2024 fikk lineær regresjon MAE 322,45, HGB 103,28 og
+baselinen 200,78. HGB ble derfor valgt og oppnådde MAE 106,22 på 2025-testen.
 
 Sammenligningen brukte 8 231 felles rader i 2024 og 8 760 i 2025. Modellen ble først
-tilpasset på 2022--2023 for validation. Etter valg ble HGB trent på training- og
-validation-data samlet før den ene målingen på 2025-testen. Denne rekkefølgen skiller
-mellom model selection og å anslå generalization error. Dersom 2025 hadde blitt brukt til
-å endre features etter hver måling, ville perioden gradvis blitt en ny
-validation period og sluttresultatet for optimistisk.
+tilpasset på 2022--2023 og valgt med valideringsdata. Etter valget ble HGB trent på
+trenings- og valideringsdata samlet før den ene målingen på 2025-testen. Slik holdt
+vi modellvalg og måling av generalisering fra hverandre. Hvis vi hadde endret
+modellvariablene etter hver måling på 2025, ville perioden gradvis blitt en ny
+valideringsperiode og sluttresultatet for optimistisk.
 
 Videre analyse viste at store feil ofte sammenfalt med helligdager og høytider.
-Deterministiske norske kalenderindikatorer ble derfor vurdert med tre expanding
-folds i 2022--2023. Gjennomsnittlig CV-MAE ble 119,69 med indikatorene og 120,03
-uten. Deretter ble den opprinnelige værhypotesen testet direkte. En raw weather model
-tapte mot traffic-only model på felles 2024-rader, med MAE 106,73 mot 103,41. En
-forhåndsdefinert weather feature-pakke med blant annet akkumulert nedbør og
-sesongavvik for temperatur og vind tapte senere alle tre CV-foldene: 124,43 mot
-119,69. Vær ga altså ingen dokumentert forbedring i noen av de to forsøkene og ble
-forkastet før sluttmodellen ble bestemt.
+Deterministiske norske kalenderindikatorer ble derfor vurdert i tre splitter med
+voksende treningsvinduer i 2022--2023. Gjennomsnittlig CV-MAE ble 119,69 med
+indikatorene og 120,03 uten. Deretter testet vi den opprinnelige værhypotesen
+direkte. En enkel værmodell tapte mot modellen uten vær på de samme 2024-radene,
+med MAE 106,73 mot 103,41. En forhåndsdefinert pakke med blant annet akkumulert
+nedbør og sesongavvik for temperatur og vind tapte senere i alle tre
+kryssvalideringsperiodene: 124,43 mot 119,69. Vær ga altså ingen dokumentert
+forbedring i noen av de to forsøkene og ble forkastet før sluttmodellen ble bestemt.
 
-Den første frozen calendar HGB-en oppnådde MAE 102,35 på 2025, men krevde de ferske
-lag features $t-1$ og $t-2$. Traffic Data API kan publisere timeaggregater med forsinkelse,
-så modellen var lite egnet til en reell neste-time-forespørsel. Prosjektet definerte
-derfor tre små, latency-robust lagpakker på forhånd: $(24,168)$, $(24,48,168)$ og
-$(24,168,336)$. Alle brukte de samme calendar feature-typene og HGB med fast
+Den første frosne kalender-HGB-en oppnådde MAE 102,35 på 2025, men krevde de ferske
+lagene $t-1$ og $t-2$. Traffic Data API kan publisere timeaggregater med forsinkelse,
+så modellen passet dårlig til en reell neste-time-forespørsel. Prosjektet definerte
+derfor tre små, latensrobuste lagpakker på forhånd: $(24,168)$, $(24,48,168)$ og
+$(24,168,336)$. Alle brukte de samme kalendervariablene og HGB med fast
 \texttt{random\_state=42}. Gjennomsnittlig CV-MAE i 2022--2023 ble henholdsvis
 134,88, 133,77 og 135,80. Pakken $(24,48,168)$ ble fryst som
 \texttt{traffic-hgb-latency-robust-v1}.
 
-Den latency-robust modellen er ikke kandidaten med lavest tidligere 2025-MAE; den
+Den latensrobuste modellen er ikke kandidaten med lavest tidligere 2025-MAE; den
 løser et annet programvarekrav. Ved å fjerne $t-1$ og $t-2$ kan appen lage en
-prognose selv om de nyeste aggregatene ikke er publisert. Kostnaden er at modellen
-mister informasjon om den umiddelbare trafikkutviklingen. Kandidatlisten ble holdt
-liten for å begrense tilpasning til CV-foldene, og ingen hyperparameters ble valgt
-fra 2026-resultatet.
+prognose selv om de nyeste aggregatene ikke er publisert. Til gjengjeld mister
+modellen informasjon om den aller nyeste trafikkutviklingen. Kandidatlisten ble
+holdt liten for å begrense tilpasning til kryssvalideringen, og ingen
+hyperparametere ble valgt fra 2026-resultatet.
 
 \subsection{Kronologisk evaluering}
 
-Random splitting ville blandet fortid og fremtid og gitt en misvisende vurdering av
-tidsserien. Prosjektet brukte derfor time-series cross-validation der hver validation
-period ligger etter training period. Model selection brukte expanding training
-windows med validation i 2022 H2, 2023 H1 og 2023 H2. Perioden 2025 var allerede
-brukt som test set for en tidligere modell og ble derfor låst for videre valg. Etter
-at den latency-robust kandidaten var frozen, ble den trent på 2022--2025 og evaluert
-én gang på det nye test set-et 2026 H1. Sluttresultatet ble ikke brukt til ny tuning.
+Tilfeldig oppdeling ville blandet fortid og fremtid og gitt et misvisende bilde av
+modellen. Prosjektet brukte derfor tidsserie-kryssvalidering, der hver
+valideringsperiode ligger etter treningsperioden. Modellvalget brukte voksende
+treningsvinduer med validering i 2022 H2, 2023 H1 og 2023 H2. Perioden 2025 var
+allerede brukt som testperiode for en tidligere modell og ble derfor låst for videre
+valg. Etter at den latensrobuste kandidaten var fryst, ble den trent på 2022--2025
+og evaluert én gang på den nye testperioden 2026 H1. Sluttresultatet ble ikke brukt
+til ny finjustering.
 
 Tabell~\ref{tab:final-results} sammenligner modell og baseline på nøyaktig de samme
 4 343 radene. Modellen reduserer MAE med 102,98 kjøretøy per time, tilsvarende 48,6
@@ -75,15 +76,16 @@ fordi enkelte timer har store feil.
   \end{tabularx}
 \end{table}
 
-\subsection{Feature importance}
+\subsection{\emph{Feature importance}}
 
-For å undersøke hva den valgte modellen faktisk bygger prediction på, ble
-permutation feature importance beregnet med MAE som scoring. Modellen ble trent på
-nytt i hver av de tre kronologiske CV-foldene, og hver feature ble permutert 30
-ganger på foldens validation-data. Figur~\ref{fig:feature-importance} viser
-gjennomsnittlig økning i MAE; en høy positiv verdi betyr at modellen mister mye
-predictive performance når sammenhengen til target brytes. Analysen ble utført etter
-at kandidaten var frozen og ble ikke brukt til å endre modell eller features.
+For å undersøke hva den valgte modellen faktisk bygger prediksjonene på, beregnet vi
+permutasjonsbasert \emph{feature importance} med MAE som evalueringsmål. Modellen
+ble trent på nytt i hver av de tre kronologiske kryssvalideringsperiodene, og hver
+variabel ble stokket 30 ganger i periodens valideringsdata.
+Figur~\ref{fig:feature-importance} viser den gjennomsnittlige økningen i MAE. En høy
+positiv verdi betyr at modellen mister mye prediksjonsevne når sammenhengen med
+\emph{target} brytes. Analysen ble gjort etter at kandidaten var fryst og ble ikke
+brukt til å endre modellen eller modellvariablene.
 
 \begin{figure}[htbp]
   \centering
@@ -115,28 +117,29 @@ at kandidaten var frozen og ble ikke brukt til å endre modell eller features.
         ]{figures/feature_importance.csv};
     \end{axis}
   \end{tikzpicture}
-  \caption{Cross-validated permutation feature importance for den frozen
-  latency-robust modellen. Error bars viser standardavvik over 90 permutasjoner
-  per feature, fordelt på tre validation-folds.}
+  \caption{Permutasjonsbasert \emph{feature importance} for den frosne,
+  latensrobuste modellen, beregnet med tidsserie-kryssvalidering. Feilindikatorene
+  viser standardavvik over 90 permutasjoner per variabel, fordelt på tre
+  valideringsperioder.}
   \label{fig:feature-importance}
 \end{figure}
 
-Størst importance fikk \texttt{traffic\_168h\_ago} med en gjennomsnittlig
+Høyest verdi fikk \texttt{traffic\_168h\_ago} med en gjennomsnittlig
 MAE-økning på 394,64, etterfulgt av \texttt{hour\_cos} med 366,88,
 \texttt{traffic\_24h\_ago} med 223,15 og \texttt{day\_of\_week} med 182,21.
 Resultatet viser at modellen særlig støtter seg på ukerytme, døgnsyklus og trafikken
 ett døgn tidligere.
 
-Resultatet må tolkes som model reliance, ikke som en kausal effekt. Flere inputs
-deler informasjon: \texttt{hour}, \texttt{hour\_sin} og \texttt{hour\_cos} beskriver
-samme døgnsyklus, mens traffic lag features er korrelerte. Permutation importance
-kan derfor fordele eller undervurdere importance mellom slike features. Analysen
-gjelder dessuten bare features i sluttmodellen; konklusjonen om at vær ikke hjalp
-kommer fortsatt fra de separate weather-model-sammenligningene.
+Resultatet forteller hva modellen støtter seg på, ikke hva som forårsaker trafikken.
+Flere variabler deler informasjon: \texttt{hour}, \texttt{hour\_sin} og
+\texttt{hour\_cos} beskriver den samme døgnsyklusen, mens trafikklagene er
+korrelerte. Metoden kan derfor fordele eller undervurdere betydningen mellom slike
+variabler. Analysen gjelder dessuten bare variablene i sluttmodellen; konklusjonen om
+at vær ikke hjalp, kommer fortsatt fra de separate væreksperimentene.
 
 \subsection{Feilanalyse}
 
-Figur~\ref{fig:hourly-error} viser MAE etter target-time i 2026 H1. Feilen er lavest
+Figur~\ref{fig:hourly-error} viser MAE etter timen som predikeres i 2026 H1. Feilen er lavest
 kl. 04 med 32,24 og høyest kl. 17 med 152,58 kjøretøy per time. Perioden fra kl. 07
 til 18 er gjennomgående vanskeligere enn natten, noe som er rimelig når volumet og
 endringstakten er større. Kl. 21 har også høy MAE, 151,36, og viser at utfordringen
@@ -162,7 +165,7 @@ ikke bare kan reduseres til klassisk rushtrafikk.
         table[x=hour,y=mae,col sep=comma]{figures/error_by_hour.csv};
     \end{axis}
   \end{tikzpicture}
-  \caption{Sluttmodellens MAE per target-time i 2026 H1. Figuren genereres fra
+  \caption{Sluttmodellens MAE per time som predikeres i 2026 H1. Figuren genereres fra
   prosjektets dokumenterte sluttrapport.}
   \label{fig:hourly-error}
 \end{figure}
@@ -170,7 +173,7 @@ ikke bare kan reduseres til klassisk rushtrafikk.
 Etter ukedag varierer MAE fra 97,05 på tirsdag til 121,89 på lørdag. De øvrige
 dagene ligger mellom 100,14 og 112,98. Analysen viser når feilen er størst, men
 forklarer ikke årsaken alene. Aktuelle forbedringer må testes i en ny kronologisk
-validation-runde, for eksempel hendelsesdata eller bedre mål på
+valideringsrunde, for eksempel hendelsesdata eller bedre mål på
 publiseringsforsinkelse, før en ny og senere testperiode åpnes.
 
 RMSE 161,85 mot MAE 108,81 viser at fordelingen inneholder noen større avvik. For
