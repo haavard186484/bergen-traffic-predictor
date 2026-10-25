@@ -1,0 +1,145 @@
+\section{Modellering}
+
+\subsection{Fra værhypotese til frosset kandidat}
+
+Forrige-uke-baselinen bruker observasjonen ved $(t+1)-168=t-167$, samme target-time
+én uke tidligere. En lineær regresjon og en \texttt{HistGradientBoostingRegressor}
+(HGB) ble først trent med kalender og trafikkverdier fra $t-1$, $t-2$, $t-24$ og
+$t-168$. På 2024-valideringen fikk lineær regresjon MAE 322,45, HGB 103,28 og
+baselinen 200,78. HGB ble valgt og fikk MAE 106,22 ved én måling på 2025.
+Sammenligningene brukte 8 231 felles rader i 2024 og 8 760 i 2025. Etter
+modellvalget ble HGB trent på trenings- og valideringsdata samlet før 2025-testen,
+slik at testresultatet ikke påvirket valget.
+
+Helligdagsindikatorer reduserte gjennomsnittlig CV-MAE i 2022--2023 fra 120,03 til
+119,69. To værforsøk ga derimot ingen forbedring: en enkel værmodell fikk MAE 106,73
+mot 103,41 uten vær på de samme 2024-radene, og en modellvariant med bearbeidede værvariabler fikk CV-MAE
+124,43 mot 119,69. Vær ble derfor forkastet før sluttmodellen ble bestemt.
+De forsinkede værvariablene ble valgt for å unngå at modellen fikk observasjoner som
+ikke ville vært publisert på prognosetidspunktet.
+
+Den første frosne kalender-HGB-en fikk MAE 102,35 på 2025, men krevde de nyeste
+trafikkverdiene ved $t-1$ og $t-2$, som ikke alltid er publisert når prognosen
+lages. Tre forhåndsdefinerte kombinasjoner av eldre trafikkverdier ble derfor sammenlignet i
+2022--2023-CV. Pakkene $(24,168)$, $(24,48,168)$ og $(24,168,336)$ fikk MAE 134,88,
+133,77 og 135,80. Vinneren $(24,48,168)$ ble fryst som
+\texttt{traffic-hgb-latency-robust-v1}. Den ofrer helt fersk trafikkinformasjon for
+å kunne brukes selv ved publiseringsforsinkelse. Kandidatlisten og
+\texttt{random\_state=42} var bestemt på forhånd, og ingen hyperparametere ble valgt
+fra den senere 2026-testen.
+
+\subsection{Kronologisk evaluering}
+
+Tilfeldig oppdeling ville blandet fortid og fremtid. Modellvalget brukte derfor
+voksende treningsvinduer med validering i 2022 H2, 2023 H1 og 2023 H2. Etter at
+2025 var låst for videre valg og kandidaten var fryst, ble modellen trent på
+2022--2025 og evaluert én gang på den nye testperioden 2026 H1. Sluttresultatet ble
+ikke brukt til ny finjustering.
+
+Tabell~\ref{tab:final-results} sammenligner modell og baseline på de samme 4 343
+radene. Modellen reduserer MAE med 102,98 kjøretøy per time, tilsvarende 48,6
+prosent. RMSE ligger over MAE fordi enkelte timer har store feil.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Sluttevaluering på den tidligere ubrukte perioden 2026 H1.}
+  \label{tab:final-results}
+  \begin{tabularx}{\textwidth}{Xrrr}
+    \toprule
+    Modell & MAE & RMSE & Rader \\
+    \midrule
+    Latensrobust HGB & 108,81 & 161,85 & 4 343 \\
+    Forrige uke & 211,79 & 454,47 & 4 343 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{\emph{Feature importance}}
+
+Permutasjonsbasert \emph{feature importance} ble beregnet med MAE i de tre
+kryssvalideringsperiodene. Hver feature ble stokket 30 ganger i hver
+valideringsperiode. Figur~\ref{fig:feature-importance} viser hvor mye feilen øker når
+sammenhengen med target brytes. Analysen ble gjort etter at kandidaten var fryst og
+ble ikke brukt til modellvalg.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      xbar,
+      width=0.82\textwidth,
+      height=8.4cm,
+      xlabel={Økning i MAE (kjøretøy/time)},
+      table/col sep=comma,
+      ytick=data,
+      yticklabels from table={figures/feature_importance.csv}{label},
+      y dir=reverse,
+      xmajorgrids=true,
+      grid style={black!12},
+      axis line style={black!55},
+      tick style={black!55},
+      bar width=5pt,
+      enlarge y limits=0.035,
+      error bars/x dir=both,
+      error bars/x explicit
+    ]
+      \addplot[fill=reportblue!75, draw=reportblue]
+        table[
+          x=mean_delta_mae,
+          x error=std_delta_mae,
+          y expr=\coordindex,
+          col sep=comma
+        ]{figures/feature_importance.csv};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Permutasjonsbasert \emph{feature importance} for den frosne,
+  latensrobuste modellen, beregnet med tidsserie-kryssvalidering. Feilindikatorene
+  viser standardavvik over 90 permutasjoner per variabel, fordelt på tre
+  valideringsperioder.}
+  \label{fig:feature-importance}
+\end{figure}
+
+Modellen støtter seg særlig på ukerytme, døgnsyklus og trafikken ett døgn tidligere.
+Trafikkverdien fra 168 timer tidligere ga størst gjennomsnittlig MAE-økning med
+394,64, etterfulgt av time-cosinus med 366,88 og trafikkverdien fra 24 timer
+tidligere med 223,15. Importance viser modellavhengighet, ikke årsak. Korrelasjon
+mellom tidsvariablene og de historiske trafikkverdiene kan dessuten fordele
+betydningen mellom dem. Konklusjonen om vær kommer fra de separate væreforsøkene.
+
+\subsection{Feilanalyse}
+
+Figur~\ref{fig:hourly-error} viser MAE etter target-time i 2026 H1. Feilen er lavest
+kl. 04 med 32,24 og høyest kl. 17 med 152,58 kjøretøy per time. Dag- og kveldstimer
+er gjennomgående vanskeligere enn natten. Kl. 21 har også høy MAE, 151,36, så
+utfordringen er ikke begrenset til vanlig rushtrafikk.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.95\textwidth,
+      height=6.2cm,
+      xlabel={Target-time i Europe/Oslo},
+      ylabel={MAE kjøretøy/time},
+      xmin=-0.5, xmax=23.5,
+      ymin=0, ymax=175,
+      xtick={0,3,6,9,12,15,18,21,23},
+      ymajorgrids=true,
+      grid style={black!12},
+      axis line style={black!55},
+      tick style={black!55}
+    ]
+      \addplot[reportblue, semithick, mark=*, mark size=1.8pt]
+        table[x=hour,y=mae,col sep=comma]{figures/error_by_hour.csv};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Sluttmodellens MAE per time som predikeres i 2026 H1. Figuren genereres fra
+  prosjektets dokumenterte sluttrapport.}
+  \label{fig:hourly-error}
+\end{figure}
+
+Etter ukedag varierer MAE fra 97,05 på tirsdag til 121,89 på lørdag. Analysen viser
+når feilen er størst, men ikke årsaken. RMSE 161,85 mot MAE 108,81 viser også noen
+større avvik, så gjennomsnittsfeilen er ingen garanti for en enkelt time. Mulige
+forbedringer, som hendelsesdata, må vurderes i en ny kronologisk valideringsrunde og
+måles på en senere, urørt testperiode.

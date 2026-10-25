@@ -1,0 +1,55 @@
+\section{Deployment}
+
+\subsection{Bygging, lagring og lasting}
+
+Sluttproduktet er en lokal Streamlit-demonstrasjon, ikke en offentlig driftet
+tjeneste. \texttt{make build-app-model} laster ned og normaliserer trafikkdata,
+trener den frosne modellen og lagrer modell og metadata lokalt. Artefakten er
+ignorert av Git og må bygges fra dokumenterte kommandoer. Appen gir byggekommandoen
+dersom modellen mangler eller ikke kan leses.
+
+Modellpakken inneholder den trente HGB-en, den ordnede featurelisten og metadata om
+modellversjon, tidspunktene for historiske trafikkverdier, treningsperiode og
+datakilde. Treningsskriptet gjenskaper
+CV-rapporten og sluttevalueringen før modellen trenes på 34 159 gyldige rader før
+1. januar 2026.
+
+\subsection{Brukerflyt og prognose}
+
+Appen startes med \texttt{streamlit run app/streamlit\_app.py}. Streamlit er et
+Python-rammeverk for interaktive dataapplikasjoner \cite{streamlit-docs}. Brukeren
+velger \enquote{Neste time} eller et historisk tidspunkt og trykker
+\enquote{Vis prognose}. Prognoseintervallet vises i \texttt{Europe/Oslo} med
+UTC-offset. Historiske valg begrenses til reelle lokale klokketimer, også ved
+overgang mellom sommer- og vintertid.
+
+Ved hvert klikk lastes modellen, og nødvendig historikk hentes fra Traffic Data API.
+Appen bygger kalenderfeatures og slår opp trafikk ved $t-24$, $t-48$ og $t-168$.
+Hvis alle verdiene finnes, vises forventet biltrafikk og de siste 72 timene i en
+graf. Målegap vises som hull. Mangler en nødvendig historisk trafikkverdi, gis
+ingen prediksjon.
+
+Appen viser modellinput, datakilde og siste tilgjengelige observasjon.
+
+\subsection{Feilhåndtering, demonstrasjon og drift}
+
+Appen skiller mellom manglende modell, API-feil og utilstrekkelig historikk og gir
+brukeren et neste steg. Historiske prognoser bruker data som er tilgjengelige nå;
+de rekonstruerer ikke tidligere publiseringstilstand og er ikke nye testresultater.
+
+En videodemonstrasjon er lenket fra prosjektets README:
+\href{https://github.com/user-attachments/assets/5598cc2d-ddde-4813-93b8-5eb32f29f990}{Bergen
+Traffic Predictor videodemonstrasjon}. Løsningen kan kjøres på en vanlig lokal
+datamaskin med Python 3.11 eller nyere.
+
+Hvert klikk gjør et nytt API-kall; denne versjonen bruker ikke mellomlager eller
+lokal database. Det gjør demonstrasjonen enkel, men gir avhengighet av API-ets
+tilgjengelighet og responstid.
+
+Før reell drift bør systemet logge API-feil, manglende historiske trafikkverdier,
+dataalder, modellversjon og prediksjoner. Når fasiten blir tilgjengelig, bør MAE og RMSE følges over tid for
+å skille datafeil fra modelldrift. Vedvarende avvik kan skyldes sensorendring,
+vegomlegging eller endret reisemønster. En ny modellversjon må velges med
+kronologisk validering og evalueres på en ny, urørt periode før den tas i bruk.
+Automatisk retrening bør ikke innføres uten en godkjenningsmekanisme som hindrer at
+målegap eller unormale perioder blir gjort til ny normal.

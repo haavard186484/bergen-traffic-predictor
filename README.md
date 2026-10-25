@@ -1,13 +1,6 @@
 # Bergen Traffic Predictor
 
-En maskinlæringsapplikasjon som predikerer antall kjøretøy ved ett
-trafikkregistreringspunkt i Bergen én time frem i tid.
-
-Den endelige løsningen er den latensrobuste, værfrie
-`traffic-hgb-latency-robust-v1`-modellen for Danmarks plass (`14630V805616`).
-Den predikerer trafikkvolum én time frem i tid fra kalenderfeatures og eksakte
-trafikklag ved `t-24`, `t-48` og `t-168`. Historiske forsøk med Frost-værdata
-er dokumentert nedenfor, men inngår ikke i appen eller sluttmodellen.
+[Les prosjektrapporten (PDF)](report/bergen-traffic-predictor-report.pdf)
 
 ## Videodemonstrasjon
 
@@ -18,6 +11,26 @@ En kort demonstrasjon av prognoseappen:
 https://github.com/user-attachments/assets/5598cc2d-ddde-4813-93b8-5eb32f29f990
 
 
+
+En maskinlæringsapplikasjon som predikerer antall kjøretøy ved ett
+trafikkregistreringspunkt i Bergen én time frem i tid.
+
+Den endelige løsningen er den latensrobuste, værfrie
+`traffic-hgb-latency-robust-v1`-modellen for Danmarks plass (`14630V805616`).
+Den predikerer trafikkvolum én time frem i tid fra kalenderfeatures og eksakte
+trafikklag ved `t-24`, `t-48` og `t-168`. Historiske forsøk med Frost-værdata
+er dokumentert nedenfor, men inngår ikke i appen eller sluttmodellen.
+
+## Bygg rapporten
+
+Bygg prosjektrapporten på nytt med:
+
+```bash
+make report
+```
+
+Bygget krever `latexmk`, pdfLaTeX, Biber og `texcount`. LaTeX-kildene og den
+reproduserbare figuren ligger i `report/`.
 
 ## Kom i gang
 

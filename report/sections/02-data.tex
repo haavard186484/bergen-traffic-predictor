@@ -1,0 +1,85 @@
+\section{Data}
+
+\subsection{Kilde, periode og targetverdier}
+
+Trafikkdata hentes fra Statens vegvesens åpne Traffic Data API, som inneholder
+aggregerte registreringer fra offentlige veger \cite{vegvesen-traffic-portal}. Uttrekket
+dekker 1. januar 2022 til 1. juli 2026 i lokal tid og gjelder feltet
+\enquote{Totalt} ved punkt \texttt{14630V805616}. Den normaliserte timeaksen har
+39 407 timer, hvorav 38 956 har observert trafikkvolum og 451 mangler verdi.
+Perioden 2022--2025 brukes til utvikling og trening, mens 4 343 observerte timer i
+2026 H1 reserveres til sluttevaluering.
+
+Targetverdien lages uten manuell merking: For en modellrad ved $t$ slås
+\texttt{traffic\_volume} ved nøyaktig $t+1$ opp som
+\texttt{target\_traffic}. Trafikkmåleren er dermed både datakilde og fasit, men
+sensorfeil og ufullstendig dekning kan påvirke begge. Pipelinen krever gyldig
+tidspunkt og et ikke-negativt volum. Rådata og modellartefakter er utelatt fra Git,
+men kan gjenskapes med \texttt{make build-app-model}.
+
+Kvalitetsrapporten finner ingen dupliserte tidspunkter og markerer rader uten volum
+som ugyldige. API-ets kvalitetsinformasjon lagres sammen med rådataene. Dette gir en
+reproduserbar kontroll av labelgrunnlaget, men kan ikke utelukke alle sensorfeil.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/danmarks_plass.png}
+  \caption{Geografisk oversikt over registreringsområdet ved Danmarks plass i
+  Statens vegvesens Trafikkdataportal. Skjermbildet viser portalens kartvisning
+  og valgte målested.}
+  \label{fig:danmarks-plass-kart}
+\end{figure}
+\FloatBarrier
+
+\subsection{Rensing og målegap}
+
+Tid konverteres til tidssonebevart UTC og kontrolleres for ugyldige og dupliserte
+tidspunkter. Kalenderinformasjon beregnes i \texttt{Europe/Oslo}, slik at tidsaksen
+er entydig gjennom sommertid og vintertid, men kalenderverdiene er lokale.
+
+De 451 manglende timene ligger i to dokumenterte gap i 2022 og 2024. Pipelinen
+oppretter en komplett timeakse og lar verdiene stå som manglende; de settes ikke til
+null, interpoleres eller erstattes. Null er en observasjon, mens en manglende verdi
+betyr at volumet er ukjent.
+
+Det første gapet varer 67 timer fra 4. til 7. juni 2022, og det andre varer 384
+timer fra 2. til 18. oktober 2024. Blant observerte timer i hele datasettet er
+minimum 40 og maksimum 4 235 kjøretøy; ingen observerte timer har volum null.
+
+Datautforskingen viste et tydelig døgn- og ukemønster. For 2022--2025 var
+gjennomsnittet høyest kl. 15 med 3 426 kjøretøy per time og lavest kl. 03 med 185.
+Helgesnittet var 1 275, som var 32,5 prosent lavere enn hverdagssnittet på 1 889.
+Dette begrunner kalenderfeatures og ukebaselinen, men brukes ikke som en alternativ
+fasit.
+
+Historiske trafikkverdier og target hentes ved eksakte tidspunkter, ikke ved å
+flytte et antall rader. Modellrader med manglende historiske trafikkverdier eller
+target fjernes før trening og evaluering.
+Dermed kan ingen observasjon flyttes over et hull i serien.
+
+\subsection{\emph{Feature engineering}}
+
+Sluttmodellen bruker 14 \emph{features}. Seks beskriver lokal kalender: time,
+ukedag, måned, helg samt sinus og cosinus av time. Fem indikatorer markerer
+offentlig helligdag, dag før og etter helligdag, jul og nyttår samt 17. mai. De tre
+historiske trafikkvariablene er observert volum ved nøyaktig
+$t-24$, $t-48$ og $t-168$. Alle er tilgjengelige, eller kan konstateres som
+manglende, når prognosen lages. Den trebaserte modellen krever ingen skalering.
+De historiske trafikkverdiene hentes med eksakte tidsforskjeller i UTC, mens
+kalenderfeatures beregnes i lokal tid. Sinus og cosinus gjør at time 23 og 00 ligger nær hverandre i
+modellens representasjon.
+
+Historiske temperatur-, nedbør- og vindmålinger ble hentet fra Frost for
+Bergen--Florida (SN50540) \cite{frost-howto}. Bare forsinkede målinger ble brukt,
+fordi \texttt{referenceTime} er observasjonstid og ikke publiseringstid
+\cite{frost-time-concepts}. Værvariantene ga dårligere valideringsmål og inngår ikke
+i sluttmodellen eller appen. Manglende værmålinger ble bevart som manglende og ikke
+imputert.
+
+\subsection{Personvern og etikk}
+
+Datasettet inneholder aggregerte passeringstall, ikke kjøretøy- eller
+personidentifikatorer, så personvernrisikoen er lav. Ett punkt representerer likevel
+ikke all trafikk i området, og ukjente hendelser kan gjøre prognosen misvisende.
+Appen oppgir derfor punkt-ID, datakilde og begrensning. Ved eventuell operativ bruk
+må ansvar for beslutninger, datalisens og sensorendringer dokumenteres.

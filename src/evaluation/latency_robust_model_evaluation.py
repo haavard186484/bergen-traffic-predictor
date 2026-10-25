@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pandas as pd
+from sklearn.inspection import permutation_importance
 
 from src.evaluation.calendar_model_evaluation import CALENDAR_CV_FOLDS
 from src.evaluation.metrics import regression_metrics
@@ -96,6 +97,65 @@ def select_by_cross_validation(cv_results: pd.DataFrame) -> Candidate:
     """Freeze the candidate with the lowest mean CV MAE."""
     selected_name = cv_results.groupby(level="model")["mae"].mean().idxmin()
     return next(candidate for candidate in CANDIDATES if candidate.name == selected_name)
+
+
+def cross_validated_permutation_importance(
+    data: pd.DataFrame,
+    candidate: Candidate,
+    *,
+    n_repeats: int = 30,
+    random_state: int = 42,
+    n_jobs: int | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Measure held-out feature reliance across the existing chronological CV folds.
+
+    With negative mean absolute error scoring, a positive delta is the increase
+    in MAE, measured in vehicles per hour, after a feature is permuted.
+    """
+    if n_repeats < 1:
+        raise ValueError("n_repeats must be positive")
+
+    rows = model_rows(data, candidate)
+    records: list[dict[str, float | int | str]] = []
+    for fold_number, fold in enumerate(CALENDAR_CV_FOLDS):
+        train_end = pd.Timestamp(fold.train_end, tz="Europe/Oslo")
+        validation_start = pd.Timestamp(fold.validation_start, tz="Europe/Oslo")
+        validation_end = pd.Timestamp(fold.validation_end, tz="Europe/Oslo")
+        train = rows.loc[rows["target_local_timestamp"] < train_end]
+        validation = rows.loc[
+            (rows["target_local_timestamp"] >= validation_start)
+            & (rows["target_local_timestamp"] < validation_end)
+        ]
+        model = train_model(train, candidate.columns, "hist_gradient_boosting")
+        importance = permutation_importance(
+            model,
+            validation[list(candidate.columns)],
+            validation["target_traffic"],
+            scoring="neg_mean_absolute_error",
+            n_repeats=n_repeats,
+            random_state=random_state + fold_number,
+            n_jobs=n_jobs,
+        )
+        for feature_number, feature in enumerate(candidate.columns):
+            for repeat, delta_mae in enumerate(importance.importances[feature_number], start=1):
+                records.append(
+                    {
+                        "feature": feature,
+                        "fold": fold.name,
+                        "repeat": repeat,
+                        "delta_mae": float(delta_mae),
+                    }
+                )
+
+    detailed = pd.DataFrame.from_records(records)
+    summary = detailed.groupby("feature", sort=False).agg(
+        mean_delta_mae=("delta_mae", "mean"),
+        std_delta_mae=("delta_mae", "std"),
+        folds=("fold", "nunique"),
+        permutations=("delta_mae", "size"),
+    )
+    summary = summary.sort_values("mean_delta_mae", ascending=False).round(2)
+    return detailed, summary
 
 
 def final_evaluation(

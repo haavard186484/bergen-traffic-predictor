@@ -1,0 +1,74 @@
+\section{Beskrivelse av problemet}
+
+\subsection{Omfang}
+
+Bergen Traffic Predictor estimerer hvor mange kjøretøy som passerer ett bestemt
+trafikkregistreringspunkt i løpet av neste time. Punktet er Danmarks plass med ID
+\texttt{14630V805616}. Hver modellrad representerer et tidspunkt $t$, mens
+\emph{target} er observert trafikkvolum ved $t+1$. Oppgaven er dermed
+\emph{supervised regression} og en kortsiktig tidsserieprognose.
+
+Prosjektets opprinnelige hypotese var at historiske værdata fra MET Norways Frost
+API kunne forbedre prediksjonene. Værvariantene tapte i kronologisk validering, så
+sluttmodellen ble værfri som følge av eksperimentene.
+
+En videreutviklet løsning kan gi trafikkplanleggere og analytikere et anslag for
+belastningen ved punktet. Den manuelle referansen er trafikken på samme klokkeslett
+én uke tidligere, eventuelt justert skjønnsmessig for helg eller ferie. Dette er
+prosjektets baseline. Maskinlæring er relevant fordi trafikken varierer med time,
+ukedag og kalenderhendelser, og fordi trafikkverdier fra flere tidligere
+tidspunkter kan samvirke ikke-lineært. Modellen mangler likevel informasjon om blant annet ulykker,
+vegarbeid og arrangementer.
+
+Prognosen kan brukes til å oppdage avvik fra et normalt ukemønster eller som ett av
+flere grunnlag for planlegging. Studentprosjektet har imidlertid ikke undersøkt
+faktisk beslutningsbruk, brukertall eller økonomisk gevinst. Løsningen demonstrerer
+derfor teknisk gjennomførbarhet, ikke dokumentert nytte eller lønnsomhet i drift.
+
+Avgrensningen til ett punkt og én times horisont gjør dataløpet og evalueringen
+entydig. Modellen sier ikke noe om reisetid, kølengde eller retning og kan ikke
+overføres direkte til andre målepunkter med andre trafikkmønstre.
+
+Figur~\ref{fig:pipeline} viser systemgrensen. Traffic Data API leverer aggregerte
+timesmålinger med kvalitetsparametere \cite{vegvesen-traffic-api}. Prosjektet
+normaliserer serien, bygger modellvariabler fra eksakte tidspunkter, trener modellen
+og bruker den i Streamlit. Trening og app deler feature-kode, mens datakvalitet og
+publiseringsforsinkelse avgjør om en prognose kan lages.
+
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\textwidth}{!}{\input{figures/pipeline}}
+  \caption{Implementert dataløp fra offentlige trafikkdata til lokal demonstrasjon.}
+  \label{fig:pipeline}
+\end{figure}
+\FloatBarrier
+
+Prosjektet regnes som vellykket dersom en lekkasjesikker modell slår
+forrige-uke-baselinen på en senere, urørt periode, kan bygges reproduserbart og gir
+enten prognose eller tydelig feilmelding. Flerårige timedata og HGB-modellen kan
+håndteres på en vanlig bærbar datamaskin. Den viktigste ressursen er
+utviklingsarbeid til datavalidering, lekkasjekontroll, evaluering og integrasjon.
+En produksjonsløsning ville i tillegg krevd driftsansvar, overvåking og rutiner for
+godkjenning av nye modellversjoner.
+
+\subsection{Metrikker}
+
+Hovedmetrikken er gjennomsnittlig absolutt feil, MAE,
+
+\begin{equation}
+  \operatorname{MAE}=\frac{1}{n}\sum_{i=1}^{n}|y_i-\hat{y}_i|.
+\end{equation}
+
+MAE måles i kjøretøy per time og kan tolkes direkte. RMSE rapporteres som støttemål
+fordi kvadreringen gir større utslag for enkelte store feil:
+
+\begin{equation}
+  \operatorname{RMSE}=\sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat{y}_i)^2}.
+\end{equation}
+
+Modell og baseline måles på de samme prognoseradene. Vi rapporterer også antall
+prediksjoner og feil etter time og ukedag. Felles rader hindrer at ulik
+tilgjengelighet av historiske trafikkverdier gir forskjellige evalueringsutvalg.
+Programvaren testes for reproduserbar bygging, modellasting, manglende historiske
+trafikkverdier, API-feil og tidssoner. Svartid,
+oppetid og brukertilfredshet er ikke målt i den lokale demonstrasjonen.

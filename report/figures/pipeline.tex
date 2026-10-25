@@ -1,0 +1,16 @@
+\begin{tikzpicture}[
+  node distance=5.5mm and 5.5mm,
+  stage/.style={draw=black!55, rounded corners=1.5pt, fill=black!3,
+    minimum height=10mm, text width=27mm, align=center, font=\small},
+  arrow/.style={-{Latex[length=2mm]}, semithick, draw=black!70}
+]
+\node[stage] (api) {Traffic Data API\\timevolum};
+\node[stage, right=of api] (prepare) {Validering og\\komplett timeakse};
+\node[stage, right=of prepare] (features) {Kalender og historiske\\trafikkverdier};
+\node[stage, right=of features] (model) {Frosset HGB\\og metadata};
+\node[stage, right=of model] (app) {Lokal\\Streamlit-app};
+\draw[arrow] (api) -- (prepare);
+\draw[arrow] (prepare) -- (features);
+\draw[arrow] (features) -- (model);
+\draw[arrow] (model) -- (app);
+\end{tikzpicture}
