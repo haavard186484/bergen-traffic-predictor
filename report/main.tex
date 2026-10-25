@@ -73,13 +73,7 @@
 \vspace{1.5em}
 
 {\small
-\textbf{Kort sammendrag.} Bergen Traffic Predictor predikerer biltrafikk én time
-frem ved Danmarks plass. Kronologiske eksperimenter viste at værdata fra Frost
-ikke forbedret resultatene, og sluttmodellen bruker derfor kalender og historisk
-trafikk. På den tidligere ubrukte perioden 2026 H1 fikk modellen MAE 108,81
-kjøretøy/time, mot 211,79 for forrige-uke-baselinen på de samme 4 343
-tidspunktene. Sluttproduktet er en lokal Streamlit-demonstrasjon for ett
-målepunkt.
+\textbf{Kort sammendrag.} Bergen Traffic Predictor predikerer trafikkvolumet ved Danmarks plass én time frem i tid. Prosjektets opprinnelige mål var å undersøke om værdata kunne forbedre prediksjonene, men eksperimentene viste at historiske værdata fra Frost ikke ga bedre resultater. Den endelige modellen bruker derfor historiske trafikkdata fra Statens vegvesen samt kalenderinformasjon, blant annet om helligdager. Modellen ble sammenlignet med en baseline som bruker trafikkvolumet på samme tidspunkt én uke tidligere. På testsettets 4 343 observasjoner oppnådde modellen en MAE på 108,81 kjøretøy per time, mot 211,79 for baselinen. Sluttproduktet er en lokal Streamlit-demonstrasjon for ett målepunkt.
 \par}
 
 \input{sections/01-problem}
